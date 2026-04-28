@@ -77,9 +77,12 @@ public class ActtraderChartsView: UIView {
     ///   - tradeDisplayFilter: Filter for which trade levels to display.
     ///   - positionRenderStyle: Render style for open positions.
     ///   - hideLevelConfirmCancel: Hide on-canvas confirm/cancel buttons on TFC level edits. Defaults to `false` when `nil`.
+    ///   - showTradeLevelsAlways: Always render SL/TP bracket lines + price pills, even without hover. Defaults to `false` when `nil`.
+    ///   - showPriceAxisCountdown: Show candle countdown timer on the right price axis under the live price tag. Defaults to `false` when `nil`.
     ///   - tradeLevelButtonScale: Multiplier for trade-level Confirm/Cancel/Edit/Close button radii and gaps. Scales visuals AND hit/drag areas together — useful for larger touch targets. Clamped to `[1.0, 3.0]`. Defaults to `1.0` when `nil`.
     ///   - showSettings: Show the settings gear button in the top bar. Set to `false` to hide it entirely. Defaults to `true` when `nil`.
-    ///   - hideSymbolAndTick: Hide the symbol name, OHLC strip, and tick-activity dot overlay. Defaults to `false` when `nil`.
+    ///   - hideSymbolAndTick: Hide the symbol name and tick-activity (streaming) dot in the top-left overlay. Does **not** affect the OHLC(V) strip — use `hideOHLCV` for that. Defaults to `false` when `nil`.
+    ///   - hideOHLCV: Hide the OHLC(V) data strip (`O: H: L: C: V:`) in the top-left overlay. Independent of `hideSymbolAndTick` — set both to `true` to hide the entire overlay. Defaults to `false` when `nil`.
     ///   - showBottomBar: Show the bottom duration-selector bar. Defaults to `false` when `nil`.
     ///   - aggregateFrom: Per-timeframe base interval override for client-side aggregation (e.g. `["1h": "1m"]`).
     ///   - canvasColorsJson: JSON string of per-theme canvas background color overrides.
@@ -126,6 +129,8 @@ public class ActtraderChartsView: UIView {
         tradeDisplayFilter: String? = nil,
         positionRenderStyle: String? = nil,
         hideLevelConfirmCancel: Bool? = nil,
+        showTradeLevelsAlways: Bool? = nil,
+        showPriceAxisCountdown: Bool? = nil,
         tradeLevelButtonScale: Double? = nil,
         levelClusteringEnabled: Bool? = nil,
         clusterThresholdDistance: Int? = nil,
@@ -133,6 +138,7 @@ public class ActtraderChartsView: UIView {
         showSettings: Bool? = nil,
         showFullscreenButton: Bool = false,
         hideSymbolAndTick: Bool? = nil,
+        hideOHLCV: Bool? = nil,
         showBottomBar: Bool? = nil,
         aggregateFrom: [String: String]? = nil,
         canvasColorsJson: String? = nil,
@@ -222,6 +228,8 @@ public class ActtraderChartsView: UIView {
             tradeDisplayFilter: tradeDisplayFilter,
             positionRenderStyle: positionRenderStyle,
             hideLevelConfirmCancel: hideLevelConfirmCancel,
+            showTradeLevelsAlways: showTradeLevelsAlways,
+            showPriceAxisCountdown: showPriceAxisCountdown,
             tradeLevelButtonScale: tradeLevelButtonScale,
             levelClusteringEnabled: levelClusteringEnabled,
             clusterThresholdDistance: clusterThresholdDistance,
@@ -229,6 +237,7 @@ public class ActtraderChartsView: UIView {
             showSettings: showSettings,
             showFullscreenButton: showFullscreenButton,
             hideSymbolAndTick: hideSymbolAndTick,
+            hideOHLCV: hideOHLCV,
             showBottomBar: showBottomBar,
             aggregateFrom: aggregateFrom,
             canvasColorsJson: canvasColorsJson,

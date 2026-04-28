@@ -55,6 +55,14 @@ public enum BridgeCommand {
         tradeDisplayFilter: String?,
         positionRenderStyle: String?,
         hideLevelConfirmCancel: Bool?,
+        /// Always render SL/TP bracket lines + price pills, even when the parent
+        /// trade level is not hovered/selected. Close (×) buttons stay hover-only.
+        /// Default: `false`.
+        showTradeLevelsAlways: Bool?,
+        /// Show the candle countdown timer on the right price axis, just below
+        /// the live price tag. Subject to the same `candleCountdownTimeframes`
+        /// filter. Default: `false`.
+        showPriceAxisCountdown: Bool?,
         /// Multiplier for trade-level Confirm/Cancel/Edit/Close button radii and gaps.
         /// Scales visuals AND hit/drag areas together — useful for touch targets.
         /// Clamped to `[1.0, 3.0]`. Default: `1.0`.
@@ -67,6 +75,7 @@ public enum BridgeCommand {
         /// Show the fullscreen toggle button in the top bar. Default: `false` on mobile (hidden).
         showFullscreenButton: Bool,
         hideSymbolAndTick: Bool?,
+        hideOHLCV: Bool?,
         showBottomBar: Bool?,
         aggregateFrom: [String: String]?,
         canvasColorsJson: String?,
@@ -276,10 +285,11 @@ public enum BridgeCommand {
                              momentumScrollEnabled, momentumDecay, momentumThreshold, momentumMaxVelocity,
                              targetCandleWidth, tickClosePriceSource,
                              tradesThresholdForHorizontalLine, tradeDisplayFilter, positionRenderStyle,
-                             hideLevelConfirmCancel, tradeLevelButtonScale,
+                             hideLevelConfirmCancel, showTradeLevelsAlways, showPriceAxisCountdown,
+                             tradeLevelButtonScale,
                              levelClusteringEnabled, clusterThresholdDistance,
                              tfcEnabled, showSettings, showFullscreenButton,
-                             hideSymbolAndTick, showBottomBar,
+                             hideSymbolAndTick, hideOHLCV, showBottomBar,
                              aggregateFrom, canvasColorsJson, themeOverridesJson, labelsJson,
                              uiConfigJson, durationTimeframeMap, onSymbolClick, timezone):
             var payload: [String: Any] = ["theme": theme]
@@ -312,6 +322,8 @@ public enum BridgeCommand {
             if let tradeDisplayFilter { payload["tradeDisplayFilter"] = tradeDisplayFilter }
             if let positionRenderStyle { payload["positionRenderStyle"] = positionRenderStyle }
             if let hideLevelConfirmCancel { payload["hideLevelConfirmCancel"] = hideLevelConfirmCancel }
+            if let showTradeLevelsAlways { payload["showTradeLevelsAlways"] = showTradeLevelsAlways }
+            if let showPriceAxisCountdown { payload["showPriceAxisCountdown"] = showPriceAxisCountdown }
             if let tradeLevelButtonScale { payload["tradeLevelButtonScale"] = tradeLevelButtonScale }
             if let levelClusteringEnabled { payload["levelClusteringEnabled"] = levelClusteringEnabled }
             if let clusterThresholdDistance { payload["clusterThresholdDistance"] = clusterThresholdDistance }
@@ -319,6 +331,7 @@ public enum BridgeCommand {
             if let showSettings { payload["showSettings"] = showSettings }
             payload["showFullscreenButton"] = showFullscreenButton
             if let hideSymbolAndTick { payload["hideSymbolAndTick"] = hideSymbolAndTick }
+            if let hideOHLCV { payload["hideOHLCV"] = hideOHLCV }
             if let showBottomBar { payload["showBottomBar"] = showBottomBar }
             if let aggregateFrom { payload["aggregateFrom"] = aggregateFrom }
             if let durationTimeframeMap { payload["durationTimeframeMap"] = durationTimeframeMap }

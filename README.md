@@ -102,8 +102,9 @@ ActtraderChartsView.prewarm()
 | `showDrawingTools` | `Bool?` | `nil` | Show drawing toolbar and pencil button |
 | `showBidAskLines` | `Bool?` | `nil` | Show bid and ask as dashed lines during a live stream |
 | `showActLogo` | `Bool?` | `nil` | Show ACT watermark logo |
-| `showCandleCountdown` | `Bool?` | `nil` | Show countdown timer on the live candle |
+| `showCandleCountdown` | `Bool?` | `nil` | Show countdown timer on the live candle (time axis) |
 | `candleCountdownTimeframes` | `[String]?` / `"all"` | `nil` | Timeframes where the countdown appears |
+| `showPriceAxisCountdown` | `Bool?` | `nil` (`false`) | Show candle countdown on the right price axis just below the live price tag. Honours `candleCountdownTimeframes`. Toggleable from the in-chart Settings dialog. |
 | `disableCountdownOnMobile` | `Bool?` | `nil` | Hide the countdown on small screens |
 | `enableTrading` | `Bool` | `false` | Show the floating buy/sell order button |
 | `minLots` | `Int?` | `nil` | Minimum lot size for order entry (requires `enableTrading`) |
@@ -122,6 +123,7 @@ ActtraderChartsView.prewarm()
 | `tradeDisplayFilter` | `String?` | `nil` | Which TFC levels are visible: `"all"` · `"positions"` · `"orders"` · `"none"` |
 | `positionRenderStyle` | `String?` | `nil` | Force position render style: `"line"` or `"dot"` |
 | `hideLevelConfirmCancel` | `Bool?` | `nil` | Hide on-canvas ✓/✗ confirm/cancel buttons for TFC level edits |
+| `showTradeLevelsAlways` | `Bool?` | `nil` (`false`) | Always render SL/TP bracket lines + price pills, even when the parent level isn't hovered or selected. Close (×) buttons stay hover-only. Toggleable from the in-chart Settings dialog (Trading tab). |
 | `tradeLevelButtonScale` | `Double?` | `nil` (`1.0`) | Multiplier for trade-level Confirm/Cancel/Edit/Close button radii and gaps. Scales visuals **and** hit/drag areas together — raise it on touch devices for easier tapping. Clamped to `[1.0, 3.0]` |
 | `levelClusteringEnabled` | `Bool?` | `true` | Enable trade-level fan-out clustering; overlapping levels group into expandable badges |
 | `clusterThresholdDistance` | `Int?` | `20` | Pixel proximity threshold for clustering (only when `levelClusteringEnabled` is `true`) |
@@ -132,7 +134,8 @@ ActtraderChartsView.prewarm()
 | `tfcEnabled` | `Bool?` | `nil` (`true`) | Enable the TFC toggle button in the top bar. When `false`, TFC is completely disabled — the toggle button is hidden and all trade levels, draft orders, and the floating trade button are suppressed |
 | `showSettings` | `Bool?` | `nil` | Show the settings gear button in the top bar; set to `false` to hide it entirely |
 | `showFullscreenButton` | `Bool` | `false` | Show the fullscreen toggle button in the top bar. Hidden by default on mobile; set to `true` to surface it |
-| `hideSymbolAndTick` | `Bool?` | `nil` | Hide the symbol name, OHLC strip, and tick-activity dot overlay |
+| `hideSymbolAndTick` | `Bool?` | `nil` | Hide the symbol name and tick-activity (streaming) dot in the top-left overlay. Does **not** affect the OHLC(V) strip — use `hideOHLCV` for that |
+| `hideOHLCV` | `Bool?` | `nil` | Hide the OHLC(V) data strip (`O: H: L: C: V:`) in the top-left overlay. Independent of `hideSymbolAndTick` — set both to `true` to hide the entire overlay |
 | `showBottomBar` | `Bool?` | `nil` | Show the bottom duration-selector bar (hidden by default) |
 | `timezone` | `String?` | `nil` (`"UTC"`) | IANA timezone string for time-axis and crosshair labels. `"UTC"` (default), `"local"` (device timezone), or any IANA string (`"America/New_York"`, `"Europe/London"`, etc.) |
 | `uiConfigJson` | `String?` | `nil` | Per-component UI configuration overrides (font sizes, icon sizes, spacing) as a raw JSON string. See *Mobile icon sizing* below. |
