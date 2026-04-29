@@ -123,6 +123,7 @@ ActtraderChartsView.prewarm()
 | `tradeDisplayFilter` | `String?` | `nil` | Which TFC levels are visible: `"all"` · `"positions"` · `"orders"` · `"none"` |
 | `positionRenderStyle` | `String?` | `nil` | Force position render style: `"line"` or `"dot"` |
 | `hideLevelConfirmCancel` | `Bool?` | `nil` | Hide on-canvas ✓/✗ confirm/cancel buttons for TFC level edits |
+| `deselectActiveOnOutsideClick` | `Bool?` | `nil` (`false`) | When `true`, clicking/tapping outside a selected trade level dismisses it (reverts pending edits). Default `false` preserves the active level across outside clicks so incidental taps (price-axis resize, taps outside the QTY input) don't drop an in-progress edit. Set `true` to restore the legacy outside-click-to-cancel behavior |
 | `showTradeLevelsAlways` | `Bool?` | `nil` (`false`) | Always render SL/TP bracket lines + price pills, even when the parent level isn't hovered or selected. Close (×) buttons stay hover-only. Toggleable from the in-chart Settings dialog (Trading tab). |
 | `tradeLevelButtonScale` | `Double?` | `nil` (`1.0`) | Multiplier for trade-level Confirm/Cancel/Edit/Close button radii and gaps. Scales visuals **and** hit/drag areas together — raise it on touch devices for easier tapping. Clamped to `[1.0, 3.0]` |
 | `levelClusteringEnabled` | `Bool?` | `true` | Enable trade-level fan-out clustering; overlapping levels group into expandable badges |

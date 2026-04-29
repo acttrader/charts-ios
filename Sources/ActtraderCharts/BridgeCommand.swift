@@ -55,6 +55,13 @@ public enum BridgeCommand {
         tradeDisplayFilter: String?,
         positionRenderStyle: String?,
         hideLevelConfirmCancel: Bool?,
+        /// When `true`, clicking or tapping outside a selected/active trade level dismisses
+        /// it (reverting any pending edits, mirroring ✗ Cancel). When `false` (default),
+        /// the active level is preserved across outside clicks — only ✓ / ✗ buttons,
+        /// tapping the level itself, or removing it via `setLevels` will dismiss it.
+        /// Recommended `false` so incidental clicks (price-axis resize, taps outside the
+        /// QTY input) don't drop an in-progress edit. Default: `false`.
+        deselectActiveOnOutsideClick: Bool?,
         /// Always render SL/TP bracket lines + price pills, even when the parent
         /// trade level is not hovered/selected. Close (×) buttons stay hover-only.
         /// Default: `false`.
@@ -285,7 +292,8 @@ public enum BridgeCommand {
                              momentumScrollEnabled, momentumDecay, momentumThreshold, momentumMaxVelocity,
                              targetCandleWidth, tickClosePriceSource,
                              tradesThresholdForHorizontalLine, tradeDisplayFilter, positionRenderStyle,
-                             hideLevelConfirmCancel, showTradeLevelsAlways, showPriceAxisCountdown,
+                             hideLevelConfirmCancel, deselectActiveOnOutsideClick,
+                             showTradeLevelsAlways, showPriceAxisCountdown,
                              tradeLevelButtonScale,
                              levelClusteringEnabled, clusterThresholdDistance,
                              tfcEnabled, showSettings, showFullscreenButton,
@@ -322,6 +330,7 @@ public enum BridgeCommand {
             if let tradeDisplayFilter { payload["tradeDisplayFilter"] = tradeDisplayFilter }
             if let positionRenderStyle { payload["positionRenderStyle"] = positionRenderStyle }
             if let hideLevelConfirmCancel { payload["hideLevelConfirmCancel"] = hideLevelConfirmCancel }
+            if let deselectActiveOnOutsideClick { payload["deselectActiveOnOutsideClick"] = deselectActiveOnOutsideClick }
             if let showTradeLevelsAlways { payload["showTradeLevelsAlways"] = showTradeLevelsAlways }
             if let showPriceAxisCountdown { payload["showPriceAxisCountdown"] = showPriceAxisCountdown }
             if let tradeLevelButtonScale { payload["tradeLevelButtonScale"] = tradeLevelButtonScale }

@@ -77,6 +77,7 @@ public class ActtraderChartsView: UIView {
     ///   - tradeDisplayFilter: Filter for which trade levels to display.
     ///   - positionRenderStyle: Render style for open positions.
     ///   - hideLevelConfirmCancel: Hide on-canvas confirm/cancel buttons on TFC level edits. Defaults to `false` when `nil`.
+    ///   - deselectActiveOnOutsideClick: Dismiss a selected/active trade level when the user clicks/taps outside it (reverts pending edits). When `false` (default), the level is preserved across outside clicks — only ✓/✗ buttons, tapping the level itself, or removing it via `setLevels` dismiss it. Set to `true` to restore the legacy outside-click-to-cancel behavior. Defaults to `false` when `nil`.
     ///   - showTradeLevelsAlways: Always render SL/TP bracket lines + price pills, even without hover. Defaults to `false` when `nil`.
     ///   - showPriceAxisCountdown: Show candle countdown timer on the right price axis under the live price tag. Defaults to `false` when `nil`.
     ///   - tradeLevelButtonScale: Multiplier for trade-level Confirm/Cancel/Edit/Close button radii and gaps. Scales visuals AND hit/drag areas together — useful for larger touch targets. Clamped to `[1.0, 3.0]`. Defaults to `1.0` when `nil`.
@@ -129,6 +130,7 @@ public class ActtraderChartsView: UIView {
         tradeDisplayFilter: String? = nil,
         positionRenderStyle: String? = nil,
         hideLevelConfirmCancel: Bool? = nil,
+        deselectActiveOnOutsideClick: Bool? = nil,
         showTradeLevelsAlways: Bool? = nil,
         showPriceAxisCountdown: Bool? = nil,
         tradeLevelButtonScale: Double? = nil,
@@ -228,6 +230,7 @@ public class ActtraderChartsView: UIView {
             tradeDisplayFilter: tradeDisplayFilter,
             positionRenderStyle: positionRenderStyle,
             hideLevelConfirmCancel: hideLevelConfirmCancel,
+            deselectActiveOnOutsideClick: deselectActiveOnOutsideClick,
             showTradeLevelsAlways: showTradeLevelsAlways,
             showPriceAxisCountdown: showPriceAxisCountdown,
             tradeLevelButtonScale: tradeLevelButtonScale,
