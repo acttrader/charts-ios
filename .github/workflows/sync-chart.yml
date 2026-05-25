@@ -35,7 +35,7 @@ jobs:
         run: |
           mkdir -p Sources/ActtraderCharts/Resources
           gh release download "v${{ github.event.client_payload.version }}" \
-            --repo piyushrawat1991/acttrader-charts \
+            --repo acttrader/ActCharts \
             --pattern "chart.html" \
             --output Sources/ActtraderCharts/Resources/chart.html \
             --clobber

@@ -1,4 +1,4 @@
-# ActtraderCharts — iOS
+# charts-ios
 
 iOS Swift framework that embeds the ActTrader financial charting library inside a `WKWebView`.
 
@@ -15,7 +15,7 @@ iOS Swift framework that embeds the ActTrader financial charting library inside 
 Add to your `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/piyushrawat1991/acttrader-charts-ios.git", from: "0.1.0")
+.package(url: "https://github.com/acttrader/charts-ios.git", from: "0.1.0")
 ```
 
 Or in Xcode: **File → Add Package Dependencies…** and enter the repo URL.
@@ -33,7 +33,7 @@ Pre-release builds are tagged as `vX.Y.Z-beta.N`. Both CocoaPods (`~>`) and SPM 
 **SPM:**
 
 ```swift
-.package(url: "https://github.com/piyushrawat1991/acttrader-charts-ios.git", exact: "1.1.0-beta.1")
+.package(url: "https://github.com/acttrader/charts-ios.git", exact: "1.1.0-beta.1")
 ```
 
 **CocoaPods:**
@@ -138,6 +138,7 @@ ActtraderChartsView.prewarm()
 | `hideSymbolAndTick` | `Bool?` | `nil` | Hide the symbol name and tick-activity (streaming) dot in the top-left overlay. Does **not** affect the OHLC(V) strip — use `hideOHLCV` for that |
 | `hideOHLCV` | `Bool?` | `nil` | Hide the OHLC(V) data strip (`O: H: L: C: V:`) in the top-left overlay. Independent of `hideSymbolAndTick` — set both to `true` to hide the entire overlay |
 | `showBottomBar` | `Bool?` | `nil` | Show the bottom duration-selector bar (hidden by default) |
+| `hideHeader` | `Bool?` | `nil` (`false`) | Hide the chart header entirely (whichever `headerLayout` variant would have rendered). Bottom bar, drawing tools, and on-canvas overlays remain on their own flags. Drive the chart from native UI via `setTimeframe(...)`, `setSeries(...)`, `addIndicatorByName(...)`, `removeIndicator(...)` |
 | `timezone` | `String?` | `nil` (`"UTC"`) | IANA timezone string for time-axis and crosshair labels. `"UTC"` (default), `"local"` (device timezone), or any IANA string (`"America/New_York"`, `"Europe/London"`, etc.) |
 | `uiConfigJson` | `String?` | `nil` | Per-component UI configuration overrides (font sizes, icon sizes, spacing) as a raw JSON string. See *Mobile icon sizing* below. |
 | `themeOverrides` | `ThemeOverrides?` | `nil` | Typed per-theme color overrides. See *Theme overrides* below. |
@@ -327,6 +328,55 @@ chart.loadData(bars)
 | `onBridgeEvent` | Generic fallback — every event including those with typed callbacks |
 
 > **`isFullscreen`** is `true` when the chart is in fullscreen mode at the time of the TFC action. Use it to gate toast notifications so they only appear while the chart is covering the full screen.
+
+## Multi-pane layouts & snapshot
+
+The WebView bundle includes the chart-owned multi-layout popover (26 grid
+presets + 5 cross-pane sync toggles) and a snapshot popover (Download / Copy
+PNG). Both are opt-in and dispatch bridge events back to the host.
+
+### Enabling the layout & snapshot UI
+
+```swift
+let chart = ActtraderChartsView(
+    theme:                 "dark",
+    symbol:                "EURUSD",
+    timeframe:             "1h",
+    headerLayout:          "advanced",   // "simple" (default) | "advanced" | "compact"
+    enableMultipleLayouts: true,         // Layout button + preset picker
+    enableSnapshot:        true          // Snapshot button + Download/Copy
+)
+
+chart.onLayoutChange = { event in
+    guard case let .layoutChange(presetId, syncJson) = event else { return }
+    // presetId is one of "1", "2-h", "2-v", "4-2x2", "6-2x3", "8-4x2", … —
+    // see the JS library's LAYOUT_PRESETS for the full catalogue.
+    // syncJson is the raw LayoutSyncState JSON: {symbol, interval, crosshair, time, dateRange}.
+    print("preset=\(presetId) sync=\(syncJson)")
+    // The host owns the actual N-pane grid — mount/teardown sibling
+    // ActtraderChartsViews to match preset.count and apply the sync flags.
+}
+
+chart.onSnapshot = { event in
+    guard case let .snapshot(dataUrl, action) = event else { return }
+    // action is "download" or "copy"; dataUrl is a base64 PNG.
+    // Intercept here to save to Photos / UIPasteboard via platform APIs.
+}
+```
+
+### `headerLayout`
+
+| Value         | Use case
+|---------------|----------------------------------------------------------------
+| `"simple"`    | Classic TopBar (default) — symbol, type, timeframe, studies, drawings
+| `"advanced"`  | Compact pill-style toolbar — recommended above multi-pane grids
+| `"compact"`   | Slim per-pane toolbar — recommended for individual cells of a grid
+
+> **Sync flags are intent, not action.** The native host is responsible for
+> mirroring symbol/timeframe/viewport across sibling chart views — the
+> JS-side `ChartGroup` only operates inside one WebView. On iOS each pane is
+> its own `ActtraderChartsView`, so coordinate from Swift (e.g. call
+> `setTimeframe(_:)` on every pane when the sync JSON's `interval` is `true`).
 
 ## Handling back / dismiss actions
 

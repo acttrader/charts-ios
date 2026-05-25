@@ -152,6 +152,24 @@ public class ActtraderChartsView: UIView {
         onSymbolClick: Bool? = nil,
         /// IANA timezone string for time-axis and crosshair labels. Default: `"UTC"`.
         timezone: String? = nil,
+        /// Top-bar variant. `"simple"` (default) is the classic TopBar; `"advanced"`
+        /// is the pill-style AdvancedToolbar; `"compact"` is the slim per-pane
+        /// CompactToolbar (intended for cells of a host-rendered multi-pane grid).
+        headerLayout: String? = nil,
+        /// Enables the chart-owned multi-layout popover (Layout button → 26 preset
+        /// picker + cross-pane sync toggles). Fires `layoutChange` events; the host
+        /// is responsible for mounting / tearing down additional panes.
+        enableMultipleLayouts: Bool? = nil,
+        /// Enables the chart-owned snapshot popover (Snapshot button → Download / Copy).
+        /// Fires `snapshot` events with a base64 PNG so the native layer can save
+        /// via Photos / UIPasteboard.
+        enableSnapshot: Bool? = nil,
+        /// Hides the chart header entirely (whichever variant `headerLayout` would
+        /// have rendered). Bottom bar, drawing tools, and on-canvas overlays stay on
+        /// their own flags. Use when the host app provides its own controls and
+        /// drives the chart via `setTimeframe(...)`, `setSeries(...)`,
+        /// `addIndicatorByName(...)`, `removeIndicator(...)`. Default: `false`.
+        hideHeader: Bool? = nil,
         initialState: String? = nil
     ) {
         // Build WKWebView configuration
@@ -249,7 +267,11 @@ public class ActtraderChartsView: UIView {
             uiConfigJson: uiConfigJson,
             durationTimeframeMap: durationTimeframeMap,
             onSymbolClick: onSymbolClick,
-            timezone: timezone
+            timezone: timezone,
+            headerLayout: headerLayout,
+            enableMultipleLayouts: enableMultipleLayouts,
+            enableSnapshot: enableSnapshot,
+            hideHeader: hideHeader
         ))
 
         // Queue state restoration alongside the init command so both are evaluated
@@ -360,6 +382,17 @@ public class ActtraderChartsView: UIView {
 
     /// Called when the user taps the symbol name and `onSymbolClick` was enabled in the init command.
     public var onSymbolClick: ((BridgeEvent) -> Void)?
+
+    /// Called when the user picks a layout preset or toggles a cross-pane sync
+    /// option in the chart-owned multi-layout popover. Fires only when
+    /// `enableMultipleLayouts = true` was passed to the initialiser.
+    public var onLayoutChange: ((BridgeEvent) -> Void)?
+
+    /// Called when the user picks Download or Copy from the chart-owned snapshot
+    /// popover. Fires only when `enableSnapshot = true` was passed to the
+    /// initialiser. Use the supplied data URL (base64 PNG) to save via Photos
+    /// or UIPasteboard.
+    public var onSnapshot: ((BridgeEvent) -> Void)?
 
     /// Called when the chart engine reports an error.
     public var onError: ((BridgeEvent) -> Void)?
@@ -798,6 +831,8 @@ public class ActtraderChartsView: UIView {
             onUiStateChange?(event)
         case .dataRequest:         onDataRequest?(event)
         case .symbolClick:         onSymbolClick?(event)
+        case .layoutChange:        onLayoutChange?(event)
+        case .snapshot:            onSnapshot?(event)
         case .error:               onError?(event)
         }
     }

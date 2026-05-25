@@ -112,6 +112,23 @@ public enum BridgeEvent {
     /// User tapped the symbol name; fires when `onSymbolClick` is enabled in the init command.
     case symbolClick(symbol: String)
 
+    /// User picked a layout preset or toggled a cross-pane sync option in the
+    /// chart-owned LayoutPopover. Fires only when `enableMultipleLayouts` is set
+    /// in `BridgeCommand.initialize`. The native host should mount / teardown
+    /// panes to match `presetId` (one of `"1"`, `"2-h"`, `"4-2x2"`, … — see the
+    /// JS library's `LAYOUT_PRESETS` for the full list) and apply the sync flags.
+    ///
+    /// `syncJson` is the raw JSON of the `LayoutSyncState` object:
+    /// `{"symbol":bool,"interval":bool,"crosshair":bool,"time":bool,"dateRange":bool}`.
+    case layoutChange(presetId: String, syncJson: String)
+
+    /// User picked Download or Copy from the chart-owned SnapshotPopover. Fires
+    /// only when `enableSnapshot` is set in `BridgeCommand.initialize`. The
+    /// native layer can save the PNG via platform APIs (Photos, UIPasteboard)
+    /// using `dataUrl` (base64).
+    /// - Parameter action: `"download"` or `"copy"`.
+    case snapshot(dataUrl: String, action: String)
+
     /// An error occurred inside the chart engine.
     case error(message: String, code: String?)
 
@@ -348,6 +365,22 @@ public enum BridgeEvent {
 
         case "symbolClick":
             return .symbolClick(symbol: p["symbol"] as? String ?? "")
+
+        case "layoutChange":
+            guard let presetId = p["presetId"] as? String else { return nil }
+            let syncJson: String = {
+                guard
+                    let sync = p["sync"],
+                    let data = try? JSONSerialization.data(withJSONObject: sync),
+                    let str  = String(data: data, encoding: .utf8)
+                else { return "{}" }
+                return str
+            }()
+            return .layoutChange(presetId: presetId, syncJson: syncJson)
+
+        case "snapshot":
+            guard let dataUrl = p["dataUrl"] as? String else { return nil }
+            return .snapshot(dataUrl: dataUrl, action: p["action"] as? String ?? "download")
 
         case "error":
             let message = p["message"] as? String ?? "Unknown error"
