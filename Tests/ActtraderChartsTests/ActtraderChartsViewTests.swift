@@ -10,9 +10,57 @@ final class BridgeCommandTests: XCTestCase {
             theme: "dark",
             symbol: "EURUSD",
             series: "candlestick",
+            timeframe: nil,
+            duration: nil,
             enableTrading: false,
+            showVolume: nil,
+            showUI: nil,
+            showDrawingTools: nil,
+            showBidAskLines: nil,
+            showActLogo: nil,
             showCandleCountdown: nil,
-            disableCountdownOnMobile: nil
+            candleCountdownTimeframes: nil,
+            disableCountdownOnMobile: nil,
+            maxSubPanes: nil,
+            mobileBarDivisor: nil,
+            minInitialBars: nil,
+            maxLookbackMs: nil,
+            momentumScrollEnabled: nil,
+            momentumDecay: nil,
+            momentumThreshold: nil,
+            momentumMaxVelocity: nil,
+            targetCandleWidth: nil,
+            tickClosePriceSource: nil,
+            tradesThresholdForHorizontalLine: nil,
+            tradeDisplayFilter: nil,
+            positionRenderStyle: nil,
+            hideLevelConfirmCancel: nil,
+            deselectActiveOnOutsideClick: nil,
+            showTradeLevelsAlways: nil,
+            showPriceAxisCountdown: nil,
+            tradeLevelButtonScale: nil,
+            levelClusteringEnabled: nil,
+            clusterThresholdDistance: nil,
+            tfcEnabled: nil,
+            showSettings: nil,
+            showFullscreenButton: false,
+            hideSymbolAndTick: nil,
+            hideOHLCV: nil,
+            showBottomBar: nil,
+            aggregateFrom: nil,
+            canvasColorsJson: nil,
+            themeOverridesJson: nil,
+            labelsJson: nil,
+            uiConfigJson: nil,
+            durationTimeframeMap: nil,
+            onSymbolClick: nil,
+            timezone: nil,
+            headerLayout: nil,
+            enableMultipleLayouts: nil,
+            enableSnapshot: nil,
+            hideHeader: nil,
+            initialCompares: nil,
+            maxCompares: nil
         )
         let obj = try parseJSON(cmd.jsonString)
         XCTAssertEqual(obj["type"] as? String, "init")
@@ -20,6 +68,72 @@ final class BridgeCommandTests: XCTestCase {
         XCTAssertEqual(payload["theme"] as? String, "dark")
         XCTAssertEqual(payload["symbol"] as? String, "EURUSD")
         XCTAssertEqual(payload["series"] as? String, "candlestick")
+    }
+
+    func testInitWithComparesIncludesInitialCompares() throws {
+        let cmd = BridgeCommand.initialize(
+            theme: "dark",
+            symbol: "AAPL",
+            series: nil, timeframe: nil, duration: nil, enableTrading: false,
+            showVolume: nil, showUI: nil, showDrawingTools: nil,
+            showBidAskLines: nil, showActLogo: nil, showCandleCountdown: nil,
+            candleCountdownTimeframes: nil, disableCountdownOnMobile: nil,
+            maxSubPanes: nil, mobileBarDivisor: nil, minInitialBars: nil,
+            maxLookbackMs: nil, momentumScrollEnabled: nil, momentumDecay: nil,
+            momentumThreshold: nil, momentumMaxVelocity: nil,
+            targetCandleWidth: nil, tickClosePriceSource: nil,
+            tradesThresholdForHorizontalLine: nil, tradeDisplayFilter: nil,
+            positionRenderStyle: nil, hideLevelConfirmCancel: nil,
+            deselectActiveOnOutsideClick: nil, showTradeLevelsAlways: nil,
+            showPriceAxisCountdown: nil, tradeLevelButtonScale: nil,
+            levelClusteringEnabled: nil, clusterThresholdDistance: nil,
+            tfcEnabled: nil, showSettings: nil, showFullscreenButton: false,
+            hideSymbolAndTick: nil, hideOHLCV: nil, showBottomBar: nil,
+            aggregateFrom: nil, canvasColorsJson: nil, themeOverridesJson: nil,
+            labelsJson: nil, uiConfigJson: nil, durationTimeframeMap: nil,
+            onSymbolClick: nil, timezone: nil, headerLayout: nil,
+            enableMultipleLayouts: nil, enableSnapshot: nil, hideHeader: nil,
+            initialCompares: ["MSFT", "GOOG"],
+            maxCompares: 4
+        )
+        let obj = try parseJSON(cmd.jsonString)
+        let payload = try XCTUnwrap(obj["payload"] as? [String: Any])
+        XCTAssertEqual(payload["initialCompares"] as? [String], ["MSFT", "GOOG"])
+        XCTAssertEqual(payload["maxCompares"] as? Int, 4)
+    }
+
+    // ── Compare commands ──────────────────────────────────────────────────────
+
+    func testAddCompareCommandJSON() throws {
+        let obj = try parseJSON(BridgeCommand.addCompare("MSFT").jsonString)
+        XCTAssertEqual(obj["type"] as? String, "addCompare")
+        let payload = try XCTUnwrap(obj["payload"] as? [String: Any])
+        XCTAssertEqual(payload["symbol"] as? String, "MSFT")
+    }
+
+    func testRemoveCompareCommandJSON() throws {
+        let obj = try parseJSON(BridgeCommand.removeCompare("MSFT").jsonString)
+        XCTAssertEqual(obj["type"] as? String, "removeCompare")
+        let payload = try XCTUnwrap(obj["payload"] as? [String: Any])
+        XCTAssertEqual(payload["symbol"] as? String, "MSFT")
+    }
+
+    func testClearComparesCommandJSON() throws {
+        let obj = try parseJSON(BridgeCommand.clearCompares.jsonString)
+        XCTAssertEqual(obj["type"] as? String, "clearCompares")
+    }
+
+    func testResolveCompareDataRequestCommandJSON() throws {
+        let bars = [OHLCVBar(time: 1_700_000_000_000, open: 100, high: 110,
+                             low: 90, close: 105, volume: 1000)]
+        let obj = try parseJSON(BridgeCommand.resolveCompareDataRequest(
+            requestId: "cr_1", bars: bars).jsonString)
+        XCTAssertEqual(obj["type"] as? String, "resolveCompareDataRequest")
+        let payload = try XCTUnwrap(obj["payload"] as? [String: Any])
+        XCTAssertEqual(payload["requestId"] as? String, "cr_1")
+        let barsArr = try XCTUnwrap(payload["bars"] as? [[String: Any]])
+        XCTAssertEqual(barsArr.count, 1)
+        XCTAssertEqual(barsArr[0]["close"] as? Double, 105)
     }
 
     func testLoadDataCommandJSON() throws {
@@ -152,6 +266,51 @@ final class BridgeCommandTests: XCTestCase {
         }
         XCTAssertEqual(message, "Engine crash")
         XCTAssertEqual(code, "E001")
+    }
+
+    func testParseCompareDataRequestEvent() {
+        let json = """
+        {"type":"compareDataRequest","payload":{"requestId":"cr_1","symbol":"MSFT","timeframe":"1D","interval":"1day","start":1700000000000,"end":1700100000000}}
+        """
+        guard case let .compareDataRequest(rid, sym, tf, intv, start, end) = BridgeEvent.parse(json) else {
+            XCTFail("Expected .compareDataRequest")
+            return
+        }
+        XCTAssertEqual(rid, "cr_1")
+        XCTAssertEqual(sym, "MSFT")
+        XCTAssertEqual(tf, "1D")
+        XCTAssertEqual(intv, "1day")
+        XCTAssertEqual(start, 1_700_000_000_000)
+        XCTAssertEqual(end, 1_700_100_000_000)
+    }
+
+    func testParseCompareAddedEvent() {
+        let json = ##"{"type":"compareAdded","payload":{"symbol":"MSFT","color":"#2962FF"}}"##
+        guard case let .compareAdded(symbol, color) = BridgeEvent.parse(json) else {
+            XCTFail("Expected .compareAdded")
+            return
+        }
+        XCTAssertEqual(symbol, "MSFT")
+        XCTAssertEqual(color, "#2962FF")
+    }
+
+    func testParseCompareRemovedEvent() {
+        let json = #"{"type":"compareRemoved","payload":{"symbol":"MSFT"}}"#
+        guard case let .compareRemoved(symbol) = BridgeEvent.parse(json) else {
+            XCTFail("Expected .compareRemoved")
+            return
+        }
+        XCTAssertEqual(symbol, "MSFT")
+    }
+
+    func testParseCompareErrorEvent() {
+        let json = #"{"type":"compareError","payload":{"symbol":"BADTICKER","message":"loader rejected"}}"#
+        guard case let .compareError(symbol, message) = BridgeEvent.parse(json) else {
+            XCTFail("Expected .compareError")
+            return
+        }
+        XCTAssertEqual(symbol, "BADTICKER")
+        XCTAssertEqual(message, "loader rejected")
     }
 
     func testParseInvalidJSONReturnsNil() {

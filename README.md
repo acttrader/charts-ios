@@ -142,6 +142,8 @@ ActtraderChartsView.prewarm()
 | `timezone` | `String?` | `nil` (`"UTC"`) | IANA timezone string for time-axis and crosshair labels. `"UTC"` (default), `"local"` (device timezone), or any IANA string (`"America/New_York"`, `"Europe/London"`, etc.) |
 | `uiConfigJson` | `String?` | `nil` | Per-component UI configuration overrides (font sizes, icon sizes, spacing) as a raw JSON string. See *Mobile icon sizing* below. |
 | `themeOverrides` | `ThemeOverrides?` | `nil` | Typed per-theme color overrides. See *Theme overrides* below. |
+| `initialCompares` | `[String]?` | `nil` | Compare symbols to add automatically on init. Each one fires `onCompareDataRequest` against the initial primary range — respond via `resolveCompareDataRequest` |
+| `maxCompares` | `Int?` | `nil` (`8`) | Maximum concurrent compare symbols. Adding beyond fires `onCompareError` |
 | `initialState` | `String?` | `nil` | Raw JSON from a prior `onStateSnapshot` to restore atomically at init (timeframe, series, indicators, drawings). See *Restoring state without a flash* below. |
 
 ### Restoring state without a flash
@@ -279,6 +281,11 @@ chart.initialize(
 | `setTimezone(_:)` | Change display timezone at runtime — IANA string (`"America/New_York"`) or `"local"` |
 | `setThemeOverrides(_:)` | Update per-theme color overrides at runtime — accepts typed `ThemeOverrides` or raw JSON string |
 | `correctBar(barTime:bar:)` | Replace a specific bar with authoritative OHLCV data (e.g. server correction) |
+| **Compare** | |
+| `addCompare(_:)` | Add a compare symbol overlay. Fires `onCompareDataRequest` — reply via `resolveCompareDataRequest` |
+| `removeCompare(_:)` | Remove a compare symbol. No-op if not active |
+| `clearCompares()` | Remove every active compare symbol |
+| `resolveCompareDataRequest(requestId:bars:)` | Resolve a pending `onCompareDataRequest` with fetched bars |
 
 #### Symbol switch pattern
 
@@ -324,6 +331,10 @@ chart.loadData(bars)
 | `onUiStateChange` | Any chart flyout/modal/dropdown opened or closed — payload includes `hasOpenUI: Bool`. Most hosts don't need this directly; `ActtraderChartsView.hasOpenUI` mirrors the state automatically and `dismissAllUI()` is the usual integration point. |
 | `onDataRequest` | Chart requests data for a time range — payload includes `requestId`, `from`, `to`, `timeframe`; call `resolveDataRequest` to respond |
 | `onSymbolClick` | User tapped the symbol name (requires `onSymbolClick: true` in `init`) |
+| `onCompareDataRequest` | Chart needs bars for a compare symbol — payload includes `requestId`, `symbol`, `timeframe`, `interval`, `start`, `end`; reply via `resolveCompareDataRequest` |
+| `onCompareAdded` | Compare symbol added — payload includes `symbol`, `color` |
+| `onCompareRemoved` | Compare symbol removed — payload includes `symbol` |
+| `onCompareError` | Compare fetch / add failed — payload includes `symbol`, `message` |
 | `onError` | Engine error |
 | `onBridgeEvent` | Generic fallback — every event including those with typed callbacks |
 
@@ -377,6 +388,56 @@ chart.onSnapshot = { event in
 > JS-side `ChartGroup` only operates inside one WebView. On iOS each pane is
 > its own `ActtraderChartsView`, so coordinate from Swift (e.g. call
 > `setTimeframe(_:)` on every pane when the sync JSON's `interval` is `true`).
+
+## Compare symbols
+
+Overlay one or more comparison instruments on the main chart, normalized to
+percent change from the leftmost visible bar. Historical-only — no live
+streaming. The chart owns the picker UI (filtered by the symbols supplied via
+the JS bundle's `isins`) and refetches every active compare automatically
+when the primary timeframe / symbol changes or the user pans back into
+history.
+
+```swift
+let chart = ActtraderChartsView(
+    theme:           "dark",
+    symbol:          "AAPL",
+    headerLayout:    "advanced",     // Compare button lives in this toolbar
+    initialCompares: ["SPY"],
+    maxCompares:     8,
+)
+
+// Serve the chart's compare data requests.
+chart.onCompareDataRequest = { [weak self] event in
+    guard case let .compareDataRequest(requestId, symbol, _, interval, start, end) = event,
+          let self else { return }
+    Task {
+        let bars = try await self.api.fetchBars(symbol: symbol,
+                                                interval: interval,
+                                                start: start,
+                                                end: end)
+        self.chart.resolveCompareDataRequest(requestId: requestId, bars: bars)
+    }
+}
+
+chart.onCompareAdded   = { event in
+    if case let .compareAdded(symbol, color) = event { print("+ \(symbol) \(color)") }
+}
+chart.onCompareRemoved = { event in
+    if case let .compareRemoved(symbol) = event { print("- \(symbol)") }
+}
+chart.onCompareError   = { event in
+    if case let .compareError(symbol, message) = event { print("⚠️ \(symbol): \(message)") }
+}
+
+// Programmatic control.
+chart.addCompare("MSFT")
+chart.removeCompare("MSFT")
+chart.clearCompares()
+```
+
+When at least one compare is active the Y-axis switches to percent
+(`+12.34%` / `-5.67%`); removing every compare returns it to absolute prices.
 
 ## Handling back / dismiss actions
 

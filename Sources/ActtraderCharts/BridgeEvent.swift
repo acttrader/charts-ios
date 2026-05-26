@@ -129,6 +129,19 @@ public enum BridgeEvent {
     /// - Parameter action: `"download"` or `"copy"`.
     case snapshot(dataUrl: String, action: String)
 
+    /// Chart engine is requesting bars for a compare symbol; native must respond
+    /// with ``BridgeCommand/resolveCompareDataRequest(requestId:bars:)``.
+    case compareDataRequest(requestId: String, symbol: String, timeframe: String, interval: String, start: Int64, end: Int64)
+
+    /// A compare symbol was added and assigned an auto-picked palette color.
+    case compareAdded(symbol: String, color: String)
+
+    /// A compare symbol was removed (×, ``ActtraderChartsView/removeCompare(_:)``, or ``ActtraderChartsView/clearCompares()``).
+    case compareRemoved(symbol: String)
+
+    /// Adding a compare or fetching its bars failed.
+    case compareError(symbol: String, message: String)
+
     /// An error occurred inside the chart engine.
     case error(message: String, code: String?)
 
@@ -381,6 +394,34 @@ public enum BridgeEvent {
         case "snapshot":
             guard let dataUrl = p["dataUrl"] as? String else { return nil }
             return .snapshot(dataUrl: dataUrl, action: p["action"] as? String ?? "download")
+
+        case "compareDataRequest":
+            guard
+                let requestId  = p["requestId"] as? String,
+                let symbol     = p["symbol"]    as? String,
+                let timeframe  = p["timeframe"] as? String,
+                let interval   = p["interval"]  as? String
+            else { return nil }
+            let cdStart: Int64 = (p["start"] as? Int64) ?? Int64(p["start"] as? Double ?? 0)
+            let cdEnd:   Int64 = (p["end"]   as? Int64) ?? Int64(p["end"]   as? Double ?? 0)
+            return .compareDataRequest(requestId: requestId, symbol: symbol,
+                                       timeframe: timeframe, interval: interval,
+                                       start: cdStart, end: cdEnd)
+
+        case "compareAdded":
+            guard
+                let symbol = p["symbol"] as? String,
+                let color  = p["color"]  as? String
+            else { return nil }
+            return .compareAdded(symbol: symbol, color: color)
+
+        case "compareRemoved":
+            guard let symbol = p["symbol"] as? String else { return nil }
+            return .compareRemoved(symbol: symbol)
+
+        case "compareError":
+            guard let symbol = p["symbol"] as? String else { return nil }
+            return .compareError(symbol: symbol, message: p["message"] as? String ?? "")
 
         case "error":
             let message = p["message"] as? String ?? "Unknown error"

@@ -110,7 +110,14 @@ public enum BridgeCommand {
         /// have rendered). Bottom bar, drawing tools, and on-canvas overlays remain
         /// on their own flags. Drive the chart from native UI via `setTimeframe`,
         /// `setSeries`, `addIndicatorByName`, `removeIndicator`. Default: `false`.
-        hideHeader: Bool?
+        hideHeader: Bool?,
+        /// Compare symbols to add automatically on chart init. Each entry triggers
+        /// a `compareDataRequest` event against the initial primary range —
+        /// respond via ``BridgeCommand/resolveCompareDataRequest(requestId:bars:)``.
+        initialCompares: [String]?,
+        /// Maximum concurrent compare symbols. Adding beyond emits a
+        /// `compareError` event. Default: `8`.
+        maxCompares: Int?
     )
 
     /// Replaces the full dataset.
@@ -295,6 +302,21 @@ public enum BridgeCommand {
     /// can decide whether to consume a back action.
     case dismissAllUI
 
+    // ── Compare ───────────────────────────────────────────────────────────────
+
+    /// Adds a compare symbol overlay. The chart fires a `compareDataRequest`
+    /// event; reply via ``BridgeCommand/resolveCompareDataRequest(requestId:bars:)``.
+    case addCompare(String)
+
+    /// Removes a compare symbol. No-op when not active.
+    case removeCompare(String)
+
+    /// Removes every active compare symbol.
+    case clearCompares
+
+    /// Resolves a pending `compareDataRequest` with fetched bars.
+    case resolveCompareDataRequest(requestId: String, bars: [OHLCVBar])
+
     // ── Serialisation ─────────────────────────────────────────────────────────
 
     /// The JSON string to pass to `window.ChartBridge.send(...)`.
@@ -318,7 +340,8 @@ public enum BridgeCommand {
                              hideSymbolAndTick, hideOHLCV, showBottomBar,
                              aggregateFrom, canvasColorsJson, themeOverridesJson, labelsJson,
                              uiConfigJson, durationTimeframeMap, onSymbolClick, timezone,
-                             headerLayout, enableMultipleLayouts, enableSnapshot, hideHeader):
+                             headerLayout, enableMultipleLayouts, enableSnapshot, hideHeader,
+                             initialCompares, maxCompares):
             var payload: [String: Any] = ["theme": theme]
             if let symbol { payload["symbol"] = symbol }
             if let series { payload["series"] = series }
@@ -369,6 +392,8 @@ public enum BridgeCommand {
             if let enableMultipleLayouts { payload["enableMultipleLayouts"] = enableMultipleLayouts }
             if let enableSnapshot { payload["enableSnapshot"] = enableSnapshot }
             if let hideHeader { payload["hideHeader"] = hideHeader }
+            if let initialCompares { payload["initialCompares"] = initialCompares }
+            if let maxCompares { payload["maxCompares"] = maxCompares }
             func embedJson(_ key: String, _ json: String?) {
                 guard let json,
                       let data = json.data(using: .utf8),
@@ -552,6 +577,24 @@ public enum BridgeCommand {
 
         case .dismissAllUI:
             envelope = ["type": "dismissAllUI", "payload": [:]]
+
+        // ── Compare ───────────────────────────────────────────────────────────
+        case let .addCompare(symbol):
+            envelope = ["type": "addCompare", "payload": ["symbol": symbol]]
+
+        case let .removeCompare(symbol):
+            envelope = ["type": "removeCompare", "payload": ["symbol": symbol]]
+
+        case .clearCompares:
+            envelope = ["type": "clearCompares", "payload": [:]]
+
+        case let .resolveCompareDataRequest(requestId, bars):
+            let barsArray: [[String: Any]] = bars.map { bar in
+                ["open": bar.open, "high": bar.high, "low": bar.low,
+                 "close": bar.close, "volume": bar.volume, "time": bar.time]
+            }
+            envelope = ["type": "resolveCompareDataRequest",
+                        "payload": ["requestId": requestId, "bars": barsArray]]
         }
 
         guard

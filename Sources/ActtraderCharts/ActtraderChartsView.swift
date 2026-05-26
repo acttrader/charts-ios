@@ -170,6 +170,11 @@ public class ActtraderChartsView: UIView {
         /// drives the chart via `setTimeframe(...)`, `setSeries(...)`,
         /// `addIndicatorByName(...)`, `removeIndicator(...)`. Default: `false`.
         hideHeader: Bool? = nil,
+        /// Compare symbols to add automatically on init. Each fires a
+        /// `compareDataRequest` event — respond via ``resolveCompareDataRequest(requestId:bars:)``.
+        initialCompares: [String]? = nil,
+        /// Maximum concurrent compare symbols. Adding beyond fires `compareError`. Default: `8`.
+        maxCompares: Int? = nil,
         initialState: String? = nil
     ) {
         // Build WKWebView configuration
@@ -271,7 +276,9 @@ public class ActtraderChartsView: UIView {
             headerLayout: headerLayout,
             enableMultipleLayouts: enableMultipleLayouts,
             enableSnapshot: enableSnapshot,
-            hideHeader: hideHeader
+            hideHeader: hideHeader,
+            initialCompares: initialCompares,
+            maxCompares: maxCompares
         ))
 
         // Queue state restoration alongside the init command so both are evaluated
@@ -394,6 +401,20 @@ public class ActtraderChartsView: UIView {
     /// or UIPasteboard.
     public var onSnapshot: ((BridgeEvent) -> Void)?
 
+    /// Called when the chart engine needs bars for a compare symbol. Fetch the
+    /// requested range and call ``resolveCompareDataRequest(requestId:bars:)``.
+    /// Payload: `.compareDataRequest(requestId:symbol:timeframe:interval:start:end:)`.
+    public var onCompareDataRequest: ((BridgeEvent) -> Void)?
+
+    /// Called when a compare symbol is added — payload `.compareAdded(symbol:color:)`.
+    public var onCompareAdded: ((BridgeEvent) -> Void)?
+
+    /// Called when a compare symbol is removed — payload `.compareRemoved(symbol:)`.
+    public var onCompareRemoved: ((BridgeEvent) -> Void)?
+
+    /// Called when adding a compare or fetching its bars fails — payload `.compareError(symbol:message:)`.
+    public var onCompareError: ((BridgeEvent) -> Void)?
+
     /// Called when the chart engine reports an error.
     public var onError: ((BridgeEvent) -> Void)?
 
@@ -491,6 +512,31 @@ public class ActtraderChartsView: UIView {
     ///   - bars: The OHLCV bars covering the requested time range.
     public func resolveDataRequest(requestId: String, bars: [OHLCVBar]) {
         sendCommand(.resolveDataRequest(requestId: requestId, bars: bars))
+    }
+
+    // ── Compare ───────────────────────────────────────────────────────────────
+
+    /// Adds a compare symbol overlay. The chart fires `.compareDataRequest`
+    /// with the primary's current timeframe / range; respond via
+    /// ``resolveCompareDataRequest(requestId:bars:)`` once bars are fetched.
+    public func addCompare(_ symbol: String) {
+        sendCommand(.addCompare(symbol))
+    }
+
+    /// Removes a compare symbol. No-op when not active.
+    public func removeCompare(_ symbol: String) {
+        sendCommand(.removeCompare(symbol))
+    }
+
+    /// Removes every active compare symbol.
+    public func clearCompares() {
+        sendCommand(.clearCompares)
+    }
+
+    /// Resolves a pending `.compareDataRequest` with fetched bars.
+    /// Call this from `onCompareDataRequest` once the historical bars are ready.
+    public func resolveCompareDataRequest(requestId: String, bars: [OHLCVBar]) {
+        sendCommand(.resolveCompareDataRequest(requestId: requestId, bars: bars))
     }
 
     /// Enables or disables verbose tick/render logging in the browser console.
@@ -833,6 +879,10 @@ public class ActtraderChartsView: UIView {
         case .symbolClick:         onSymbolClick?(event)
         case .layoutChange:        onLayoutChange?(event)
         case .snapshot:            onSnapshot?(event)
+        case .compareDataRequest:  onCompareDataRequest?(event)
+        case .compareAdded:        onCompareAdded?(event)
+        case .compareRemoved:      onCompareRemoved?(event)
+        case .compareError:        onCompareError?(event)
         case .error:               onError?(event)
         }
     }
