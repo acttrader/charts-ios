@@ -142,6 +142,18 @@ public enum BridgeEvent {
     /// Adding a compare or fetching its bars failed.
     case compareError(symbol: String, message: String)
 
+    /// A study instance was added. Multiple instances of the same study can be
+    /// active at once (e.g. EMA-20, EMA-50). Keep `instanceId` to later remove
+    /// this specific instance via ``ActtraderChartsView/removeIndicator(_:)``.
+    /// - Parameters:
+    ///   - instanceId: Unique per-instance id (e.g. `"EMA#3"`).
+    ///   - shortName:  Study short name (e.g. `"EMA"`).
+    ///   - params:     Resolved params (period, color, source, timeframe, …).
+    case indicatorAdded(instanceId: String, shortName: String, params: [String: Any])
+
+    /// A study instance was removed (pill ×, settings dialog, or removeIndicator).
+    case indicatorRemoved(instanceId: String, shortName: String)
+
     /// An error occurred inside the chart engine.
     case error(message: String, code: String?)
 
@@ -422,6 +434,21 @@ public enum BridgeEvent {
         case "compareError":
             guard let symbol = p["symbol"] as? String else { return nil }
             return .compareError(symbol: symbol, message: p["message"] as? String ?? "")
+
+        case "indicatorAdded":
+            guard
+                let instanceId = p["instanceId"] as? String,
+                let shortName  = p["shortName"]  as? String
+            else { return nil }
+            return .indicatorAdded(instanceId: instanceId, shortName: shortName,
+                                   params: p["params"] as? [String: Any] ?? [:])
+
+        case "indicatorRemoved":
+            guard
+                let instanceId = p["instanceId"] as? String,
+                let shortName  = p["shortName"]  as? String
+            else { return nil }
+            return .indicatorRemoved(instanceId: instanceId, shortName: shortName)
 
         case "error":
             let message = p["message"] as? String ?? "Unknown error"

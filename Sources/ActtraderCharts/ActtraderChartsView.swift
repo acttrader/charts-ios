@@ -415,6 +415,13 @@ public class ActtraderChartsView: UIView {
     /// Called when adding a compare or fetching its bars fails — payload `.compareError(symbol:message:)`.
     public var onCompareError: ((BridgeEvent) -> Void)?
 
+    /// Called when a study instance is added — payload `.indicatorAdded(instanceId:shortName:params:)`.
+    /// Keep `instanceId` to later remove that specific instance via ``removeIndicator(_:)``.
+    public var onIndicatorAdded: ((BridgeEvent) -> Void)?
+
+    /// Called when a study instance is removed — payload `.indicatorRemoved(instanceId:shortName:)`.
+    public var onIndicatorRemoved: ((BridgeEvent) -> Void)?
+
     /// Called when the chart engine reports an error.
     public var onError: ((BridgeEvent) -> Void)?
 
@@ -469,11 +476,18 @@ public class ActtraderChartsView: UIView {
     }
 
     /// Adds a study by short name (e.g. `"SMA"`, `"EMA"`, `"RSI"`, `"BB"`).
+    ///
+    /// Parameterized studies support multiple simultaneous instances: each call
+    /// adds a new instance (with an auto-cycled color). Observe ``onIndicatorAdded``
+    /// for the resulting `instanceId`. A few studies are single-instance and toggle
+    /// instead (`VOL`, `OBV`, `A/D`, `AO`, `VWAP`, `Ichimoku`, `PSAR`, `Pivot`, `HA`).
     public func addIndicator(_ name: String, params: [String: Any]? = nil) {
         sendCommand(.addIndicator(name: name, params: params))
     }
 
-    /// Removes a study by name.
+    /// Removes a study. Pass an `instanceId` (e.g. `"EMA#3"`, from ``onIndicatorAdded``)
+    /// to remove that single instance, or a short name (e.g. `"EMA"`) to remove **all**
+    /// instances of that study.
     public func removeIndicator(_ name: String) {
         sendCommand(.removeIndicator(name))
     }
@@ -883,6 +897,8 @@ public class ActtraderChartsView: UIView {
         case .compareAdded:        onCompareAdded?(event)
         case .compareRemoved:      onCompareRemoved?(event)
         case .compareError:        onCompareError?(event)
+        case .indicatorAdded:      onIndicatorAdded?(event)
+        case .indicatorRemoved:    onIndicatorRemoved?(event)
         case .error:               onError?(event)
         }
     }

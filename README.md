@@ -238,8 +238,8 @@ chart.initialize(
 | `setSeries(_:)` | `"candlestick"`, `"line"`, `"area"`, `"ohlc"`, `"hollow_candle"` |
 | `setTimeframe(_:)` | `"1m"` `"5m"` `"15m"` `"30m"` `"1h"` `"4h"` `"1D"` `"1W"` `"1M"` `"1Y"` |
 | `setSymbol(_:)` | Updates the symbol name in the top bar |
-| `addIndicator(_:params:)` | `"SMA"`, `"EMA"`, `"RSI"`, `"BB"`, etc. |
-| `removeIndicator(_:)` | Removes a study by name |
+| `addIndicator(_:params:)` | `"SMA"`, `"EMA"`, `"RSI"`, `"BB"`, etc. Parameterized studies add a **new instance** per call; observe `onIndicatorAdded` for its `instanceId` |
+| `removeIndicator(_:)` | Remove a study — pass an `instanceId` (e.g. `"EMA#3"`) for one instance, or a short name (e.g. `"EMA"`) for all instances of that study |
 | `setDrawingTool(_:)` | `"trend_line"`, `"horizontal_line"`, etc. — `nil` to deactivate |
 | `clearAllDrawings()` | Removes all drawings |
 | `getState()` | Fires `onStateSnapshot` asynchronously |
@@ -335,6 +335,8 @@ chart.loadData(bars)
 | `onCompareAdded` | Compare symbol added — payload includes `symbol`, `color` |
 | `onCompareRemoved` | Compare symbol removed — payload includes `symbol` |
 | `onCompareError` | Compare fetch / add failed — payload includes `symbol`, `message` |
+| `onIndicatorAdded` | Study instance added — payload includes `instanceId`, `shortName`, `params`; keep `instanceId` to remove that instance later |
+| `onIndicatorRemoved` | Study instance removed — payload includes `instanceId`, `shortName` |
 | `onError` | Engine error |
 | `onBridgeEvent` | Generic fallback — every event including those with typed callbacks |
 
@@ -438,6 +440,36 @@ chart.clearCompares()
 
 When at least one compare is active the Y-axis switches to percent
 (`+12.34%` / `-5.67%`); removing every compare returns it to absolute prices.
+
+## Multiple instances of the same study
+
+Parameterized studies (EMA, SMA, RSI, BB, …) support multiple simultaneous
+instances, each with an auto-cycled color:
+
+```swift
+chart.addIndicator("EMA", params: ["period": 20])
+chart.addIndicator("EMA", params: ["period": 50])   // a 2nd EMA, distinct color
+chart.addIndicator("EMA", params: ["period": 200])  // a 3rd
+
+// Track instance ids so you can remove a specific one.
+var emaIds: [String] = []
+chart.onIndicatorAdded = { event in
+    if case let .indicatorAdded(instanceId, shortName, _) = event, shortName == "EMA" {
+        emaIds.append(instanceId)
+    }
+}
+chart.onIndicatorRemoved = { event in
+    if case let .indicatorRemoved(instanceId, _) = event {
+        emaIds.removeAll { $0 == instanceId }
+    }
+}
+
+chart.removeIndicator(emaIds.first!)  // remove just that instance ("EMA#1")
+chart.removeIndicator("EMA")          // or remove ALL EMA instances
+```
+
+A few studies stay single-instance and toggle off when re-added: `VOL`, `OBV`,
+`A/D`, `AO`, `VWAP`, `Ichimoku`, `PSAR`, `Pivot`, and Heikin-Ashi.
 
 ## Handling back / dismiss actions
 
