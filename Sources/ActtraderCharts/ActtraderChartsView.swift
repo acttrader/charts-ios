@@ -175,6 +175,10 @@ public class ActtraderChartsView: UIView {
         initialCompares: [String]? = nil,
         /// Maximum concurrent compare symbols. Adding beyond fires `compareError`. Default: `8`.
         maxCompares: Int? = nil,
+        /// Initial state of the layout popover's cross-pane sync toggles (only
+        /// meaningful with `enableMultipleLayouts`). Partial — `nil` fields use the
+        /// library default. Change later via ``setLayoutSync(_:)``.
+        layoutSync: LayoutSync? = nil,
         initialState: String? = nil
     ) {
         // Build WKWebView configuration
@@ -278,7 +282,8 @@ public class ActtraderChartsView: UIView {
             enableSnapshot: enableSnapshot,
             hideHeader: hideHeader,
             initialCompares: initialCompares,
-            maxCompares: maxCompares
+            maxCompares: maxCompares,
+            layoutSync: layoutSync
         ))
 
         // Queue state restoration alongside the init command so both are evaluated
@@ -449,6 +454,14 @@ public class ActtraderChartsView: UIView {
     /// Accepts any IANA string (e.g. `"America/New_York"`), `"UTC"`, or `"local"`.
     public func setTimezone(_ timezone: String) {
         sendCommand(.setTimezone(timezone))
+    }
+
+    /// Updates the chart-owned layout popover's cross-pane sync toggles (Symbol /
+    /// Interval / Crosshair / Time / Date range). Partial — `nil` fields keep their
+    /// current value. Only has an effect when `enableMultipleLayouts: true` was
+    /// passed at init. Use to restore a user's persisted sync preferences.
+    public func setLayoutSync(_ sync: LayoutSync) {
+        sendCommand(.setLayoutSync(sync))
     }
 
     /// Changes the chart series type.

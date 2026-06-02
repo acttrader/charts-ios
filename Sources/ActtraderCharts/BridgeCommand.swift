@@ -1,5 +1,36 @@
 import Foundation
 
+/// Cross-pane sync toggles for the chart-owned layout popover (Symbol / Interval
+/// / Crosshair / Time / Date range). All fields are optional — a `nil` field is
+/// omitted from the payload and keeps its current (or library-default) value on
+/// the chart side. Only meaningful when `enableMultipleLayouts` is `true`.
+public struct LayoutSync {
+    public var symbol: Bool?
+    public var interval: Bool?
+    public var crosshair: Bool?
+    public var time: Bool?
+    public var dateRange: Bool?
+
+    public init(symbol: Bool? = nil, interval: Bool? = nil, crosshair: Bool? = nil,
+                time: Bool? = nil, dateRange: Bool? = nil) {
+        self.symbol = symbol
+        self.interval = interval
+        self.crosshair = crosshair
+        self.time = time
+        self.dateRange = dateRange
+    }
+
+    var jsonObject: [String: Any] {
+        var o: [String: Any] = [:]
+        if let symbol { o["symbol"] = symbol }
+        if let interval { o["interval"] = interval }
+        if let crosshair { o["crosshair"] = crosshair }
+        if let time { o["time"] = time }
+        if let dateRange { o["dateRange"] = dateRange }
+        return o
+    }
+}
+
 /// Commands sent from native iOS code to the chart WebView.
 ///
 /// Each case serialises itself to the JSON format expected by
@@ -117,7 +148,12 @@ public enum BridgeCommand {
         initialCompares: [String]?,
         /// Maximum concurrent compare symbols. Adding beyond emits a
         /// `compareError` event. Default: `8`.
-        maxCompares: Int?
+        maxCompares: Int?,
+        /// Initial state of the chart-owned layout popover's cross-pane sync
+        /// toggles (only meaningful with `enableMultipleLayouts`). Partial — any
+        /// `nil` field falls back to the library default. Change it later on a
+        /// live chart via ``ActtraderChartsView/setLayoutSync(_:)``.
+        layoutSync: LayoutSync?
     )
 
     /// Replaces the full dataset.
@@ -134,6 +170,11 @@ public enum BridgeCommand {
     /// Changes the display timezone for time-axis and crosshair labels.
     /// Accepts any IANA string (e.g. `"America/New_York"`), `"UTC"`, or `"local"`.
     case setTimezone(String)
+
+    /// Updates the chart-owned layout popover's cross-pane sync toggles. Partial —
+    /// `nil` fields keep their current value. Only meaningful with
+    /// `enableMultipleLayouts`.
+    case setLayoutSync(LayoutSync)
 
     /// Changes the chart series type (e.g. `"candlestick"`, `"line"`, `"area"`).
     case setSeries(String)
@@ -341,7 +382,7 @@ public enum BridgeCommand {
                              aggregateFrom, canvasColorsJson, themeOverridesJson, labelsJson,
                              uiConfigJson, durationTimeframeMap, onSymbolClick, timezone,
                              headerLayout, enableMultipleLayouts, enableSnapshot, hideHeader,
-                             initialCompares, maxCompares):
+                             initialCompares, maxCompares, layoutSync):
             var payload: [String: Any] = ["theme": theme]
             if let symbol { payload["symbol"] = symbol }
             if let series { payload["series"] = series }
@@ -394,6 +435,7 @@ public enum BridgeCommand {
             if let hideHeader { payload["hideHeader"] = hideHeader }
             if let initialCompares { payload["initialCompares"] = initialCompares }
             if let maxCompares { payload["maxCompares"] = maxCompares }
+            if let layoutSync { payload["layoutSync"] = layoutSync.jsonObject }
             func embedJson(_ key: String, _ json: String?) {
                 guard let json,
                       let data = json.data(using: .utf8),
@@ -422,6 +464,9 @@ public enum BridgeCommand {
 
         case let .setTimezone(tz):
             envelope = ["type": "setTimezone", "payload": ["timezone": tz]]
+
+        case let .setLayoutSync(sync):
+            envelope = ["type": "setLayoutSync", "payload": sync.jsonObject]
 
         case let .setSeries(series):
             envelope = ["type": "setSeries", "payload": ["series": series]]
