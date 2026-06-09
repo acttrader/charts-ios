@@ -150,11 +150,16 @@ public class ActtraderChartsView: UIView {
         uiConfigJson: String? = nil,
         durationTimeframeMap: [String: String]? = nil,
         onSymbolClick: Bool? = nil,
+        /// When `true`, the `"mobile"` header renders an "Ask AI" (✦) button that
+        /// fires a `.askAiClick` event on tap. No effect in other header layouts.
+        onAskAiClick: Bool? = nil,
         /// IANA timezone string for time-axis and crosshair labels. Default: `"UTC"`.
         timezone: String? = nil,
         /// Top-bar variant. `"simple"` (default) is the classic TopBar; `"advanced"`
         /// is the pill-style AdvancedToolbar; `"compact"` is the slim per-pane
-        /// CompactToolbar (intended for cells of a host-rendered multi-pane grid).
+        /// CompactToolbar (intended for cells of a host-rendered multi-pane grid);
+        /// `"mobile"` renders the compact mobile header (Tools · timeframe pills ·
+        /// optional Ask AI button).
         headerLayout: String? = nil,
         /// Enables the chart-owned multi-layout popover (Layout button → 26 preset
         /// picker + cross-pane sync toggles). Fires `layoutChange` events; the host
@@ -276,6 +281,7 @@ public class ActtraderChartsView: UIView {
             uiConfigJson: uiConfigJson,
             durationTimeframeMap: durationTimeframeMap,
             onSymbolClick: onSymbolClick,
+            onAskAiClick: onAskAiClick,
             timezone: timezone,
             headerLayout: headerLayout,
             enableMultipleLayouts: enableMultipleLayouts,
@@ -394,6 +400,10 @@ public class ActtraderChartsView: UIView {
 
     /// Called when the user taps the symbol name and `onSymbolClick` was enabled in the init command.
     public var onSymbolClick: ((BridgeEvent) -> Void)?
+
+    /// Called when the user taps the "Ask AI" (✦) button in the mobile header and
+    /// `onAskAiClick` was enabled in the init command (only meaningful with `headerLayout: "mobile"`).
+    public var onAskAiClick: ((BridgeEvent) -> Void)?
 
     /// Called when the user picks a layout preset or toggles a cross-pane sync
     /// option in the chart-owned multi-layout popover. Fires only when
@@ -904,6 +914,7 @@ public class ActtraderChartsView: UIView {
             onUiStateChange?(event)
         case .dataRequest:         onDataRequest?(event)
         case .symbolClick:         onSymbolClick?(event)
+        case .askAiClick:          onAskAiClick?(event)
         case .layoutChange:        onLayoutChange?(event)
         case .snapshot:            onSnapshot?(event)
         case .compareDataRequest:  onCompareDataRequest?(event)

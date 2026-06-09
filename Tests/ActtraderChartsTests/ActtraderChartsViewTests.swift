@@ -54,6 +54,7 @@ final class BridgeCommandTests: XCTestCase {
             uiConfigJson: nil,
             durationTimeframeMap: nil,
             onSymbolClick: nil,
+            onAskAiClick: nil,
             timezone: nil,
             headerLayout: nil,
             enableMultipleLayouts: nil,
@@ -91,7 +92,7 @@ final class BridgeCommandTests: XCTestCase {
             hideSymbolAndTick: nil, hideOHLCV: nil, showBottomBar: nil,
             aggregateFrom: nil, canvasColorsJson: nil, themeOverridesJson: nil,
             labelsJson: nil, uiConfigJson: nil, durationTimeframeMap: nil,
-            onSymbolClick: nil, timezone: nil, headerLayout: nil,
+            onSymbolClick: nil, onAskAiClick: nil, timezone: nil, headerLayout: nil,
             enableMultipleLayouts: nil, enableSnapshot: nil, hideHeader: nil,
             initialCompares: ["MSFT", "GOOG"],
             maxCompares: 4
