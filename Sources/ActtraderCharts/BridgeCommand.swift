@@ -122,11 +122,17 @@ public enum BridgeCommand {
         uiConfigJson: String?,
         durationTimeframeMap: [String: String]?,
         onSymbolClick: Bool?,
+        /// When `true`, the `"mobile"` header renders an "Ask AI" (✦) button that
+        /// fires an `askAiClick` event on tap. No effect in other header layouts.
+        /// Default: `nil` (button hidden).
+        onAskAiClick: Bool?,
         /// IANA timezone string for time-axis and crosshair labels. Default: `"UTC"`.
         timezone: String?,
         /// Top-bar variant. `"simple"` (default) shows the classic TopBar; `"advanced"`
         /// uses the pill-style AdvancedToolbar; `"compact"` uses the slim per-pane
-        /// CompactToolbar (intended for cells of a host-rendered multi-pane grid).
+        /// CompactToolbar (intended for cells of a host-rendered multi-pane grid);
+        /// `"mobile"` renders the compact mobile header (Tools · timeframe pills ·
+        /// optional Ask AI button).
         headerLayout: String?,
         /// Enables the chart-owned multi-layout popover (Layout button → 26 preset
         /// picker + cross-pane sync toggles). Fires `layoutChange` events; the host
@@ -380,7 +386,7 @@ public enum BridgeCommand {
                              tfcEnabled, showSettings, showFullscreenButton,
                              hideSymbolAndTick, hideOHLCV, showBottomBar,
                              aggregateFrom, canvasColorsJson, themeOverridesJson, labelsJson,
-                             uiConfigJson, durationTimeframeMap, onSymbolClick, timezone,
+                             uiConfigJson, durationTimeframeMap, onSymbolClick, onAskAiClick, timezone,
                              headerLayout, enableMultipleLayouts, enableSnapshot, hideHeader,
                              initialCompares, maxCompares, layoutSync):
             var payload: [String: Any] = ["theme": theme]
@@ -428,6 +434,7 @@ public enum BridgeCommand {
             if let aggregateFrom { payload["aggregateFrom"] = aggregateFrom }
             if let durationTimeframeMap { payload["durationTimeframeMap"] = durationTimeframeMap }
             if let onSymbolClick, onSymbolClick { payload["onSymbolClick"] = true }
+            if let onAskAiClick, onAskAiClick { payload["onAskAiClick"] = true }
             if let timezone { payload["timezone"] = timezone }
             if let headerLayout { payload["headerLayout"] = headerLayout }
             if let enableMultipleLayouts { payload["enableMultipleLayouts"] = enableMultipleLayouts }

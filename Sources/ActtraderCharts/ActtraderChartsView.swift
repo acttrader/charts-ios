@@ -78,6 +78,7 @@ public class ActtraderChartsView: UIView {
     ///   - positionRenderStyle: Render style for open positions.
     ///   - hideLevelConfirmCancel: Hide on-canvas confirm/cancel buttons on TFC level edits. Defaults to `false` when `nil`.
     ///   - deselectActiveOnOutsideClick: Dismiss a selected/active trade level when the user clicks/taps outside it (reverts pending edits). When `false` (default), the level is preserved across outside clicks — only ✓/✗ buttons, tapping the level itself, or removing it via `setLevels` dismiss it. Set to `true` to restore the legacy outside-click-to-cancel behavior. Defaults to `false` when `nil`.
+    ///   - showTradeLevelsAlways: Always render SL/TP bracket lines + price pills, even without hover. Defaults to `true`; pass `false` to hide them until hover/selection.
     ///   - showTradeLevelsAlways: Always render SL/TP bracket lines + price pills, even without hover. Defaults to `true`; pass `false` to show them only on hover/selection.
     ///   - showPriceAxisCountdown: Show candle countdown timer on the right price axis under the live price tag. Defaults to `false` when `nil`.
     ///   - tradeLevelButtonScale: Multiplier for trade-level Confirm/Cancel/Edit/Close button radii and gaps. Scales visuals AND hit/drag areas together — useful for larger touch targets. Clamped to `[1.0, 3.0]`. Defaults to `1.0` when `nil`.
@@ -150,11 +151,16 @@ public class ActtraderChartsView: UIView {
         uiConfigJson: String? = nil,
         durationTimeframeMap: [String: String]? = nil,
         onSymbolClick: Bool? = nil,
+        /// When `true`, the `"mobile"` header renders an "Ask AI" (✦) button that
+        /// fires a `.askAiClick` event on tap. No effect in other header layouts.
+        onAskAiClick: Bool? = nil,
         /// IANA timezone string for time-axis and crosshair labels. Default: `"UTC"`.
         timezone: String? = nil,
         /// Top-bar variant. `"simple"` (default) is the classic TopBar; `"advanced"`
         /// is the pill-style AdvancedToolbar; `"compact"` is the slim per-pane
-        /// CompactToolbar (intended for cells of a host-rendered multi-pane grid).
+        /// CompactToolbar (intended for cells of a host-rendered multi-pane grid);
+        /// `"mobile"` renders the compact mobile header (Tools · timeframe pills ·
+        /// optional Ask AI button).
         headerLayout: String? = nil,
         /// Enables the chart-owned multi-layout popover (Layout button → 26 preset
         /// picker + cross-pane sync toggles). Fires `layoutChange` events; the host
@@ -276,6 +282,7 @@ public class ActtraderChartsView: UIView {
             uiConfigJson: uiConfigJson,
             durationTimeframeMap: durationTimeframeMap,
             onSymbolClick: onSymbolClick,
+            onAskAiClick: onAskAiClick,
             timezone: timezone,
             headerLayout: headerLayout,
             enableMultipleLayouts: enableMultipleLayouts,
@@ -394,6 +401,10 @@ public class ActtraderChartsView: UIView {
 
     /// Called when the user taps the symbol name and `onSymbolClick` was enabled in the init command.
     public var onSymbolClick: ((BridgeEvent) -> Void)?
+
+    /// Called when the user taps the "Ask AI" (✦) button in the mobile header and
+    /// `onAskAiClick` was enabled in the init command (only meaningful with `headerLayout: "mobile"`).
+    public var onAskAiClick: ((BridgeEvent) -> Void)?
 
     /// Called when the user picks a layout preset or toggles a cross-pane sync
     /// option in the chart-owned multi-layout popover. Fires only when
@@ -904,6 +915,7 @@ public class ActtraderChartsView: UIView {
             onUiStateChange?(event)
         case .dataRequest:         onDataRequest?(event)
         case .symbolClick:         onSymbolClick?(event)
+        case .askAiClick:          onAskAiClick?(event)
         case .layoutChange:        onLayoutChange?(event)
         case .snapshot:            onSnapshot?(event)
         case .compareDataRequest:  onCompareDataRequest?(event)
