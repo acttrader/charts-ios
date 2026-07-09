@@ -196,6 +196,18 @@ All properties at every level are optional — only supply the ones you want to 
 
 > Raw JSON strings are still supported via `themeOverridesJson` / `setThemeOverrides(jsonString)` for backward compatibility.
 
+### Fonts
+
+The chart renders inside a `WKWebView`. The symbol name, O/H/L/C strip, and toolbar text
+inherit the WebView document's `body` font. The bundled `chart.html` sets a system-font
+stack (`'Inter', system-ui, -apple-system, …`), so these render in **San Francisco** — no
+setup required.
+
+> Fixed in `v1.1.0` (chart bundle from ActCharts): earlier beta bundles set no `body`
+> font, so the symbol name and OHLC strip fell back to the WebView's default **serif**
+> (Times). Updating to a build with the current `chart.html` resolves it — there are no
+> Swift API changes.
+
 ### Mobile icon sizing
 
 The chart automatically bumps top-bar icon buttons (settings, fullscreen, drawing toggle) and the floating trade ⊕ button to larger sizes when the container width drops below `uiConfig.drawingToolbar.mobileBreakpoint` (default `480px`). Defaults:
