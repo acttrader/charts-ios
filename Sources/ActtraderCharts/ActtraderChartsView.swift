@@ -72,7 +72,9 @@ public class ActtraderChartsView: UIView {
     ///   - momentumThreshold: Minimum release velocity (px/ms) to trigger momentum. Defaults to `0.3` when `nil`.
     ///   - momentumMaxVelocity: Maximum launch velocity (px/ms) for momentum. Defaults to `6.0` when `nil`.
     ///   - targetCandleWidth: Target candle width in pixels. Defaults to 10 when `nil`.
-    ///   - tickClosePriceSource: Price source for tick close (`"bid"` or `"ask"`). Defaults to `"bid"` when `nil`.
+    ///   - tickClosePriceSource: Price source for tick close (`"bid"`, `"ask"`, or `"ltp"`).
+    ///     `"ltp"` builds live candles from the last traded price (exchange/dealing feeds);
+    ///     ticks without a valid LTP fall back to the bid. Defaults to `"bid"` when `nil`.
     ///   - tradesThresholdForHorizontalLine: Min trade count to render a horizontal level line.
     ///   - tradeDisplayFilter: Filter for which trade levels to display.
     ///   - positionRenderStyle: Render style for open positions.
@@ -485,8 +487,13 @@ public class ActtraderChartsView: UIView {
     /// Pushes a live tick for streaming updates.
     ///
     /// The bridge aggregates ticks into the current candle; use `loadData(_:)` for bulk replacement.
-    public func pushTick(bid: Double, ask: Double, timestamp: Int64) {
-        sendCommand(.pushTick(bid: bid, ask: ask, timestamp: timestamp))
+    ///
+    /// - Parameters:
+    ///   - ltp: Last traded price — optional, sent by exchange/dealing feeds and
+    ///     consumed when `tickClosePriceSource == "ltp"`; ticks without it fall back to the bid.
+    ///   - ltpv: Last traded volume — optional, accompanies `ltp` on trade ticks.
+    public func pushTick(bid: Double, ask: Double, timestamp: Int64, ltp: Double? = nil, ltpv: Double? = nil) {
+        sendCommand(.pushTick(bid: bid, ask: ask, timestamp: timestamp, ltp: ltp, ltpv: ltpv))
     }
 
     /// Changes the active timeframe (e.g. `"1m"`, `"1h"`, `"1D"`).
