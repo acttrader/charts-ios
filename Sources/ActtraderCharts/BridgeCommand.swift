@@ -166,7 +166,14 @@ public enum BridgeCommand {
     case loadData(bars: [OHLCVBar], fitAll: Bool)
 
     /// Pushes a live bid/ask tick for streaming updates.
-    case pushTick(bid: Double, ask: Double, timestamp: Int64)
+    /// `ltp`/`ltpv` (last traded price/volume) are optional — sent by
+    /// exchange/dealing feeds and consumed when `tickClosePriceSource == "ltp"`.
+    case pushTick(bid: Double, ask: Double, timestamp: Int64, ltp: Double?, ltpv: Double?)
+
+    /// Backward-compatible factory matching the pre-LTP `pushTick` shape.
+    public static func pushTick(bid: Double, ask: Double, timestamp: Int64) -> BridgeCommand {
+        .pushTick(bid: bid, ask: ask, timestamp: timestamp, ltp: nil, ltpv: nil)
+    }
 
     // ── Appearance ────────────────────────────────────────────────────────────
 
@@ -463,8 +470,11 @@ public enum BridgeCommand {
             }
             envelope = ["type": "loadData", "payload": ["bars": barsArray, "fitAll": fitAll]]
 
-        case let .pushTick(bid, ask, timestamp):
-            envelope = ["type": "pushTick", "payload": ["B": bid, "A": ask, "T": timestamp]]
+        case let .pushTick(bid, ask, timestamp, ltp, ltpv):
+            var tickPayload: [String: Any] = ["B": bid, "A": ask, "T": timestamp]
+            if let ltp { tickPayload["LTP"] = ltp }
+            if let ltpv { tickPayload["LTPV"] = ltpv }
+            envelope = ["type": "pushTick", "payload": tickPayload]
 
         case let .setTheme(theme):
             envelope = ["type": "setTheme", "payload": ["theme": theme]]
