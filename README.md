@@ -100,7 +100,9 @@ ActtraderChartsView.prewarm()
 | `showVolume` | `Bool?` | `nil` | Show volume bars |
 | `showUI` | `Bool?` | `nil` | Show top / bottom bars. When `false`, the loading overlay is also suppressed |
 | `showDrawingTools` | `Bool?` | `nil` | Show drawing toolbar and pencil button |
-| `showBidAskLines` | `Bool?` | `nil` | Show bid and ask as dashed lines during a live stream |
+| `showBidAskLines` | `Bool?` | `nil` | **Deprecated** — show bid and ask as dashed lines during a live stream. Prefer `showAskLine` / `showBidLine` |
+| `showAskLine` | `Bool?` | `nil` | Show the Ask price line independently. `nil`: legacy `showBidAskLines` behavior |
+| `showBidLine` | `Bool?` | `nil` | Show the Bid price line independently. `nil`: legacy `showBidAskLines` behavior |
 | `showActLogo` | `Bool?` | `nil` | Show ACT watermark logo |
 | `showCandleCountdown` | `Bool?` | `nil` | Show countdown timer on the live candle (time axis) |
 | `candleCountdownTimeframes` | `[String]?` / `"all"` | `nil` | Timeframes where the countdown appears |
@@ -119,6 +121,7 @@ ActtraderChartsView.prewarm()
 | `momentumMaxVelocity` | `Double?` | `nil` | Max launch velocity (px/ms). Default: `6.0` |
 | `targetCandleWidth` | `Double?` | `nil` | Target px width per candle for auto-calculating initial bar count |
 | `tickClosePriceSource` | `String?` | `nil` | `"bid"` (default), `"ask"`, or `"ltp"` for live tick close/high/low. `"ltp"` builds candles from the last traded price (exchange/dealing feeds); ticks without a valid LTP fall back to the bid |
+| `showLtpPrice` | `Bool?` | `nil` | Show the LTP marker (dashed price line + axis tag). `nil`: shown only in `"ltp"` mode. `true`: always shown when the feed supplies an LTP. `false`: hidden even in `"ltp"` mode |
 | `tradesThresholdForHorizontalLine` | `Int?` | `nil` | Level count above which render auto-switches to dot mode |
 | `tradeDisplayFilter` | `String?` | `nil` | Which TFC levels are visible: `"all"` · `"positions"` · `"orders"` · `"none"` |
 | `positionRenderStyle` | `String?` | `nil` | Force position render style: `"line"` or `"dot"` |
@@ -247,6 +250,7 @@ chart.initialize(
 |---|---|
 | `loadData(_ bars:, fitAll:)` | Replaces the full dataset |
 | `pushTick(bid:ask:timestamp:ltp:ltpv:)` | Streams a live tick. `ltp`/`ltpv` (last traded price/volume) are optional — sent by exchange/dealing feeds and used when `tickClosePriceSource == "ltp"`, e.g. `chart.pushTick(bid: 1.2055, ask: 1.2057, timestamp: ts, ltp: 1.2056, ltpv: 120)` |
+| `setShowLtpPrice(_:)` | Show/hide the LTP price marker at runtime; pass `nil` to restore the default (marker follows `tickClosePriceSource == "ltp"`) |
 | `setTheme(_:)` | `"dark"` or `"light"` |
 | `setSeries(_:)` | `"candlestick"`, `"line"`, `"area"`, `"ohlc"`, `"hollow_candle"` |
 | `setTimeframe(_:)` | `"1m"` `"5m"` `"15m"` `"30m"` `"1h"` `"4h"` `"1D"` `"1W"` `"1M"` `"1Y"` |

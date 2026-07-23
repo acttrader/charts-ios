@@ -58,6 +58,8 @@ public enum BridgeCommand {
         showUI: Bool?,
         showDrawingTools: Bool?,
         showBidAskLines: Bool?,
+        showAskLine: Bool?,
+        showBidLine: Bool?,
         showActLogo: Bool?,
         showCandleCountdown: Bool?,
         candleCountdownTimeframes: [String]?,
@@ -82,6 +84,7 @@ public enum BridgeCommand {
         momentumMaxVelocity: Double?,
         targetCandleWidth: Double?,
         tickClosePriceSource: String?,
+        showLtpPrice: Bool?,
         tradesThresholdForHorizontalLine: Int?,
         tradeDisplayFilter: String?,
         positionRenderStyle: String?,
@@ -169,6 +172,10 @@ public enum BridgeCommand {
     /// `ltp`/`ltpv` (last traded price/volume) are optional — sent by
     /// exchange/dealing feeds and consumed when `tickClosePriceSource == "ltp"`.
     case pushTick(bid: Double, ask: Double, timestamp: Int64, ltp: Double?, ltpv: Double?)
+
+    /// Shows/hides the LTP price marker at runtime. Pass `nil` to restore the
+    /// default (marker follows `tickClosePriceSource == "ltp"`).
+    case setShowLtpPrice(show: Bool?)
 
     /// Backward-compatible factory matching the pre-LTP `pushTick` shape.
     public static func pushTick(bid: Double, ask: Double, timestamp: Int64) -> BridgeCommand {
@@ -379,12 +386,12 @@ public enum BridgeCommand {
         switch self {
 
         case let .initialize(theme, symbol, series, timeframe, duration, enableTrading,
-                             showVolume, showUI, showDrawingTools, showBidAskLines, showActLogo,
+                             showVolume, showUI, showDrawingTools, showBidAskLines, showAskLine, showBidLine, showActLogo,
                              showCandleCountdown, candleCountdownTimeframes, disableCountdownOnMobile,
                              maxSubPanes, mobileBarDivisor,
                              minInitialBars, maxLookbackMs,
                              momentumScrollEnabled, momentumDecay, momentumThreshold, momentumMaxVelocity,
-                             targetCandleWidth, tickClosePriceSource,
+                             targetCandleWidth, tickClosePriceSource, showLtpPrice,
                              tradesThresholdForHorizontalLine, tradeDisplayFilter, positionRenderStyle,
                              hideLevelConfirmCancel, deselectActiveOnOutsideClick,
                              showTradeLevelsAlways, showPriceAxisCountdown,
@@ -408,6 +415,8 @@ public enum BridgeCommand {
             if let showUI { payload["showUI"] = showUI }
             if let showDrawingTools { payload["showDrawingTools"] = showDrawingTools }
             if let showBidAskLines { payload["showBidAskLines"] = showBidAskLines }
+            if let showAskLine { payload["showAskLine"] = showAskLine }
+            if let showBidLine { payload["showBidLine"] = showBidLine }
             if let showActLogo { payload["showActLogo"] = showActLogo }
             if let showCandleCountdown { payload["showCandleCountdown"] = showCandleCountdown }
             if let candleCountdownTimeframes { payload["candleCountdownTimeframes"] = candleCountdownTimeframes }
@@ -422,6 +431,7 @@ public enum BridgeCommand {
             if let momentumMaxVelocity { payload["momentumMaxVelocity"] = momentumMaxVelocity }
             if let targetCandleWidth { payload["targetCandleWidth"] = targetCandleWidth }
             if let tickClosePriceSource { payload["tickClosePriceSource"] = tickClosePriceSource }
+            if let showLtpPrice { payload["showLtpPrice"] = showLtpPrice }
             if let tradesThresholdForHorizontalLine { payload["tradesThresholdForHorizontalLine"] = tradesThresholdForHorizontalLine }
             if let tradeDisplayFilter { payload["tradeDisplayFilter"] = tradeDisplayFilter }
             if let positionRenderStyle { payload["positionRenderStyle"] = positionRenderStyle }
@@ -475,6 +485,11 @@ public enum BridgeCommand {
             if let ltp { tickPayload["LTP"] = ltp }
             if let ltpv { tickPayload["LTPV"] = ltpv }
             envelope = ["type": "pushTick", "payload": tickPayload]
+
+        case let .setShowLtpPrice(show):
+            var showPayload: [String: Any] = [:]
+            if let show { showPayload["show"] = show }
+            envelope = ["type": "setShowLtpPrice", "payload": showPayload]
 
         case let .setTheme(theme):
             envelope = ["type": "setTheme", "payload": ["theme": theme]]
