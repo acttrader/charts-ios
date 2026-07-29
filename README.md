@@ -195,6 +195,31 @@ All properties at every level are optional — only supply the ones you want to 
 
 > Raw JSON strings are still supported via `themeOverridesJson` / `setThemeOverrides(jsonString)` for backward compatibility.
 
+#### Fib Retracement ratios
+
+Tapping a Fib Retracement on the chart and opening **LEVELS → Configure ▾** lets the user retype each level's ratio next to its visibility checkbox and color swatch. The line moves to the new ratio keeping its color and visibility, and the number of levels stays the same — a value that isn't a finite number, or that another row already uses, reverts. This is in-WebView chart UI: it needs **no config flag and no native call**, and works on touch as soon as the bundled `chart.html` includes it.
+
+To change the **defaults** (`0` · `0.236` · `0.382` · `0.5` · `0.618` · `0.786` · `1`), use the raw-JSON form — `ChartThemeOverride` has no typed `drawing` field yet:
+
+```swift
+chart.setThemeOverrides("""
+{
+  "dark": {
+    "drawing": {
+      "fibRetracement": {
+        "levels": {
+          "0.786": { "visible": false, "color": "#e8b84b" },
+          "0.886": { "visible": true,  "color": "#e8b84b" }
+        }
+      }
+    }
+  }
+}
+""")
+```
+
+Ratios are map keys, so write them in canonical number form (`"0.5"`, not `"0.50"`).
+
 ### Mobile icon sizing
 
 The chart automatically bumps top-bar icon buttons (settings, fullscreen, drawing toggle) and the floating trade ⊕ button to larger sizes when the container width drops below `uiConfig.drawingToolbar.mobileBreakpoint` (default `480px`). Defaults:
