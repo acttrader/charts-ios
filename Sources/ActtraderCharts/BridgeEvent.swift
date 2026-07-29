@@ -112,6 +112,10 @@ public enum BridgeEvent {
     /// User tapped the symbol name; fires when `onSymbolClick` is enabled in the init command.
     case symbolClick(symbol: String)
 
+    /// User tapped the "Ask AI" (✦) button in the mobile header; fires when
+    /// `onAskAiClick` is enabled in the init command.
+    case askAiClick
+
     /// User picked a layout preset or toggled a cross-pane sync option in the
     /// chart-owned LayoutPopover. Fires only when `enableMultipleLayouts` is set
     /// in `BridgeCommand.initialize`. The native host should mount / teardown
@@ -390,6 +394,9 @@ public enum BridgeEvent {
 
         case "symbolClick":
             return .symbolClick(symbol: p["symbol"] as? String ?? "")
+
+        case "askAiClick":
+            return .askAiClick
 
         case "layoutChange":
             guard let presetId = p["presetId"] as? String else { return nil }

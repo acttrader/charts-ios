@@ -58,6 +58,8 @@ public enum BridgeCommand {
         showUI: Bool?,
         showDrawingTools: Bool?,
         showBidAskLines: Bool?,
+        showAskLine: Bool?,
+        showBidLine: Bool?,
         showActLogo: Bool?,
         showCandleCountdown: Bool?,
         candleCountdownTimeframes: [String]?,
@@ -82,6 +84,7 @@ public enum BridgeCommand {
         momentumMaxVelocity: Double?,
         targetCandleWidth: Double?,
         tickClosePriceSource: String?,
+        showLtpPrice: Bool?,
         tradesThresholdForHorizontalLine: Int?,
         tradeDisplayFilter: String?,
         positionRenderStyle: String?,
@@ -122,11 +125,17 @@ public enum BridgeCommand {
         uiConfigJson: String?,
         durationTimeframeMap: [String: String]?,
         onSymbolClick: Bool?,
+        /// When `true`, the `"mobile"` header renders an "Ask AI" (✦) button that
+        /// fires an `askAiClick` event on tap. No effect in other header layouts.
+        /// Default: `nil` (button hidden).
+        onAskAiClick: Bool?,
         /// IANA timezone string for time-axis and crosshair labels. Default: `"UTC"`.
         timezone: String?,
         /// Top-bar variant. `"simple"` (default) shows the classic TopBar; `"advanced"`
         /// uses the pill-style AdvancedToolbar; `"compact"` uses the slim per-pane
-        /// CompactToolbar (intended for cells of a host-rendered multi-pane grid).
+        /// CompactToolbar (intended for cells of a host-rendered multi-pane grid);
+        /// `"mobile"` renders the compact mobile header (Tools · timeframe pills ·
+        /// optional Ask AI button).
         headerLayout: String?,
         /// Enables the chart-owned multi-layout popover (Layout button → 26 preset
         /// picker + cross-pane sync toggles). Fires `layoutChange` events; the host
@@ -160,7 +169,18 @@ public enum BridgeCommand {
     case loadData(bars: [OHLCVBar], fitAll: Bool)
 
     /// Pushes a live bid/ask tick for streaming updates.
-    case pushTick(bid: Double, ask: Double, timestamp: Int64)
+    /// `ltp`/`ltpv` (last traded price/volume) are optional — sent by
+    /// exchange/dealing feeds and consumed when `tickClosePriceSource == "ltp"`.
+    case pushTick(bid: Double, ask: Double, timestamp: Int64, ltp: Double?, ltpv: Double?)
+
+    /// Shows/hides the LTP price marker at runtime. Pass `nil` to restore the
+    /// default (marker follows `tickClosePriceSource == "ltp"`).
+    case setShowLtpPrice(show: Bool?)
+
+    /// Backward-compatible factory matching the pre-LTP `pushTick` shape.
+    public static func pushTick(bid: Double, ask: Double, timestamp: Int64) -> BridgeCommand {
+        .pushTick(bid: bid, ask: ask, timestamp: timestamp, ltp: nil, ltpv: nil)
+    }
 
     // ── Appearance ────────────────────────────────────────────────────────────
 
@@ -366,12 +386,12 @@ public enum BridgeCommand {
         switch self {
 
         case let .initialize(theme, symbol, series, timeframe, duration, enableTrading,
-                             showVolume, showUI, showDrawingTools, showBidAskLines, showActLogo,
+                             showVolume, showUI, showDrawingTools, showBidAskLines, showAskLine, showBidLine, showActLogo,
                              showCandleCountdown, candleCountdownTimeframes, disableCountdownOnMobile,
                              maxSubPanes, mobileBarDivisor,
                              minInitialBars, maxLookbackMs,
                              momentumScrollEnabled, momentumDecay, momentumThreshold, momentumMaxVelocity,
-                             targetCandleWidth, tickClosePriceSource,
+                             targetCandleWidth, tickClosePriceSource, showLtpPrice,
                              tradesThresholdForHorizontalLine, tradeDisplayFilter, positionRenderStyle,
                              hideLevelConfirmCancel, deselectActiveOnOutsideClick,
                              showTradeLevelsAlways, showPriceAxisCountdown,
@@ -380,7 +400,7 @@ public enum BridgeCommand {
                              tfcEnabled, showSettings, showFullscreenButton,
                              hideSymbolAndTick, hideOHLCV, showBottomBar,
                              aggregateFrom, canvasColorsJson, themeOverridesJson, labelsJson,
-                             uiConfigJson, durationTimeframeMap, onSymbolClick, timezone,
+                             uiConfigJson, durationTimeframeMap, onSymbolClick, onAskAiClick, timezone,
                              headerLayout, enableMultipleLayouts, enableSnapshot, hideHeader,
                              initialCompares, maxCompares, layoutSync):
             var payload: [String: Any] = ["theme": theme]
@@ -395,6 +415,8 @@ public enum BridgeCommand {
             if let showUI { payload["showUI"] = showUI }
             if let showDrawingTools { payload["showDrawingTools"] = showDrawingTools }
             if let showBidAskLines { payload["showBidAskLines"] = showBidAskLines }
+            if let showAskLine { payload["showAskLine"] = showAskLine }
+            if let showBidLine { payload["showBidLine"] = showBidLine }
             if let showActLogo { payload["showActLogo"] = showActLogo }
             if let showCandleCountdown { payload["showCandleCountdown"] = showCandleCountdown }
             if let candleCountdownTimeframes { payload["candleCountdownTimeframes"] = candleCountdownTimeframes }
@@ -409,6 +431,7 @@ public enum BridgeCommand {
             if let momentumMaxVelocity { payload["momentumMaxVelocity"] = momentumMaxVelocity }
             if let targetCandleWidth { payload["targetCandleWidth"] = targetCandleWidth }
             if let tickClosePriceSource { payload["tickClosePriceSource"] = tickClosePriceSource }
+            if let showLtpPrice { payload["showLtpPrice"] = showLtpPrice }
             if let tradesThresholdForHorizontalLine { payload["tradesThresholdForHorizontalLine"] = tradesThresholdForHorizontalLine }
             if let tradeDisplayFilter { payload["tradeDisplayFilter"] = tradeDisplayFilter }
             if let positionRenderStyle { payload["positionRenderStyle"] = positionRenderStyle }
@@ -428,6 +451,7 @@ public enum BridgeCommand {
             if let aggregateFrom { payload["aggregateFrom"] = aggregateFrom }
             if let durationTimeframeMap { payload["durationTimeframeMap"] = durationTimeframeMap }
             if let onSymbolClick, onSymbolClick { payload["onSymbolClick"] = true }
+            if let onAskAiClick, onAskAiClick { payload["onAskAiClick"] = true }
             if let timezone { payload["timezone"] = timezone }
             if let headerLayout { payload["headerLayout"] = headerLayout }
             if let enableMultipleLayouts { payload["enableMultipleLayouts"] = enableMultipleLayouts }
@@ -456,8 +480,16 @@ public enum BridgeCommand {
             }
             envelope = ["type": "loadData", "payload": ["bars": barsArray, "fitAll": fitAll]]
 
-        case let .pushTick(bid, ask, timestamp):
-            envelope = ["type": "pushTick", "payload": ["B": bid, "A": ask, "T": timestamp]]
+        case let .pushTick(bid, ask, timestamp, ltp, ltpv):
+            var tickPayload: [String: Any] = ["B": bid, "A": ask, "T": timestamp]
+            if let ltp { tickPayload["LTP"] = ltp }
+            if let ltpv { tickPayload["LTPV"] = ltpv }
+            envelope = ["type": "pushTick", "payload": tickPayload]
+
+        case let .setShowLtpPrice(show):
+            var showPayload: [String: Any] = [:]
+            if let show { showPayload["show"] = show }
+            envelope = ["type": "setShowLtpPrice", "payload": showPayload]
 
         case let .setTheme(theme):
             envelope = ["type": "setTheme", "payload": ["theme": theme]]

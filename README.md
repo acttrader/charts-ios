@@ -100,7 +100,9 @@ ActtraderChartsView.prewarm()
 | `showVolume` | `Bool?` | `nil` | Show volume bars |
 | `showUI` | `Bool?` | `nil` | Show top / bottom bars. When `false`, the loading overlay is also suppressed |
 | `showDrawingTools` | `Bool?` | `nil` | Show drawing toolbar and pencil button |
-| `showBidAskLines` | `Bool?` | `nil` | Show bid and ask as dashed lines during a live stream |
+| `showBidAskLines` | `Bool?` | `nil` | **Deprecated** — show bid and ask as dashed lines during a live stream. Prefer `showAskLine` / `showBidLine` |
+| `showAskLine` | `Bool?` | `nil` | Show the Ask price line independently. `nil`: legacy `showBidAskLines` behavior |
+| `showBidLine` | `Bool?` | `nil` | Show the Bid price line independently. `nil`: legacy `showBidAskLines` behavior |
 | `showActLogo` | `Bool?` | `nil` | Show ACT watermark logo |
 | `showCandleCountdown` | `Bool?` | `nil` | Show countdown timer on the live candle (time axis) |
 | `candleCountdownTimeframes` | `[String]?` / `"all"` | `nil` | Timeframes where the countdown appears |
@@ -118,12 +120,14 @@ ActtraderChartsView.prewarm()
 | `momentumThreshold` | `Double?` | `nil` | Min release velocity (px/ms) to launch momentum. Default: `0.3` |
 | `momentumMaxVelocity` | `Double?` | `nil` | Max launch velocity (px/ms). Default: `6.0` |
 | `targetCandleWidth` | `Double?` | `nil` | Target px width per candle for auto-calculating initial bar count |
-| `tickClosePriceSource` | `String?` | `nil` | `"bid"` or `"ask"` for live tick close/high/low |
+| `tickClosePriceSource` | `String?` | `nil` | `"bid"` (default), `"ask"`, or `"ltp"` for live tick close/high/low. `"ltp"` builds candles from the last traded price (exchange/dealing feeds); ticks without a valid LTP fall back to the bid |
+| `showLtpPrice` | `Bool?` | `nil` | Show the LTP marker (dashed price line + axis tag). `nil`: shown only in `"ltp"` mode. `true`: always shown when the feed supplies an LTP. `false`: hidden even in `"ltp"` mode |
 | `tradesThresholdForHorizontalLine` | `Int?` | `nil` | Level count above which render auto-switches to dot mode |
 | `tradeDisplayFilter` | `String?` | `nil` | Which TFC levels are visible: `"all"` · `"positions"` · `"orders"` · `"none"` |
 | `positionRenderStyle` | `String?` | `nil` | Force position render style: `"line"` or `"dot"` |
 | `hideLevelConfirmCancel` | `Bool?` | `nil` | Hide on-canvas ✓/✗ confirm/cancel buttons for TFC level edits |
 | `deselectActiveOnOutsideClick` | `Bool?` | `nil` (`false`) | When `true`, clicking/tapping outside a selected trade level dismisses it (reverts pending edits). Default `false` preserves the active level across outside clicks so incidental taps (price-axis resize, taps outside the QTY input) don't drop an in-progress edit. Set `true` to restore the legacy outside-click-to-cancel behavior |
+| `showTradeLevelsAlways` | `Bool?` | `true` | Always render SL/TP bracket lines + price pills, even when the parent level isn't hovered or selected. Close (×) buttons stay hover-only. Pass `false` to hide them until hover/selection. Toggleable from the in-chart Settings dialog (Trading tab). |
 | `showTradeLevelsAlways` | `Bool?` | `true` | Always render SL/TP bracket lines + price pills, even when the parent level isn't hovered or selected. Close (×) buttons stay hover-only. Pass `false` to show them only on hover/selection. Toggleable from the in-chart Settings dialog (Trading tab). |
 | `tradeLevelButtonScale` | `Double?` | `nil` (`1.0`) | Multiplier for trade-level Confirm/Cancel/Edit/Close button radii and gaps. Scales visuals **and** hit/drag areas together — raise it on touch devices for easier tapping. Clamped to `[1.0, 3.0]` |
 | `levelClusteringEnabled` | `Bool?` | `true` | Enable trade-level fan-out clustering; overlapping levels group into expandable badges |
@@ -195,30 +199,17 @@ All properties at every level are optional — only supply the ones you want to 
 
 > Raw JSON strings are still supported via `themeOverridesJson` / `setThemeOverrides(jsonString)` for backward compatibility.
 
-#### Fib Retracement ratios
+### Fonts
 
-Tapping a Fib Retracement on the chart and opening **LEVELS → Configure ▾** lets the user retype each level's ratio next to its visibility checkbox and color swatch. The line moves to the new ratio keeping its color and visibility, and the number of levels stays the same — a value that isn't a finite number, or that another row already uses, reverts. This is in-WebView chart UI: it needs **no config flag and no native call**, and works on touch as soon as the bundled `chart.html` includes it.
+The chart renders inside a `WKWebView`. The symbol name, O/H/L/C strip, and toolbar text
+inherit the WebView document's `body` font. The bundled `chart.html` sets a system-font
+stack (`'Inter', system-ui, -apple-system, …`), so these render in **San Francisco** — no
+setup required.
 
-To change the **defaults** (`0` · `0.236` · `0.382` · `0.5` · `0.618` · `0.786` · `1`), use the raw-JSON form — `ChartThemeOverride` has no typed `drawing` field yet:
-
-```swift
-chart.setThemeOverrides("""
-{
-  "dark": {
-    "drawing": {
-      "fibRetracement": {
-        "levels": {
-          "0.786": { "visible": false, "color": "#e8b84b" },
-          "0.886": { "visible": true,  "color": "#e8b84b" }
-        }
-      }
-    }
-  }
-}
-""")
-```
-
-Ratios are map keys, so write them in canonical number form (`"0.5"`, not `"0.50"`).
+> Fixed in `v1.1.0` (chart bundle from ActCharts): earlier beta bundles set no `body`
+> font, so the symbol name and OHLC strip fell back to the WebView's default **serif**
+> (Times). Updating to a build with the current `chart.html` resolves it — there are no
+> Swift API changes.
 
 ### Mobile icon sizing
 
@@ -258,7 +249,8 @@ chart.initialize(
 | Method | Description |
 |---|---|
 | `loadData(_ bars:, fitAll:)` | Replaces the full dataset |
-| `pushTick(bid:ask:timestamp:)` | Streams a live tick |
+| `pushTick(bid:ask:timestamp:ltp:ltpv:)` | Streams a live tick. `ltp`/`ltpv` (last traded price/volume) are optional — sent by exchange/dealing feeds and used when `tickClosePriceSource == "ltp"`, e.g. `chart.pushTick(bid: 1.2055, ask: 1.2057, timestamp: ts, ltp: 1.2056, ltpv: 120)` |
+| `setShowLtpPrice(_:)` | Show/hide the LTP price marker at runtime; pass `nil` to restore the default (marker follows `tickClosePriceSource == "ltp"`) |
 | `setTheme(_:)` | `"dark"` or `"light"` |
 | `setSeries(_:)` | `"candlestick"`, `"line"`, `"area"`, `"ohlc"`, `"hollow_candle"` |
 | `setTimeframe(_:)` | `"1m"` `"5m"` `"15m"` `"30m"` `"1h"` `"4h"` `"1D"` `"1W"` `"1M"` `"1Y"` |

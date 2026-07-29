@@ -61,6 +61,10 @@ public class ActtraderChartsView: UIView {
     ///   - showUI: Show the chart toolbar UI. Defaults to `true` when `nil`.
     ///   - showDrawingTools: Show drawing tools in the toolbar. Defaults to `true` when `nil`.
     ///   - showBidAskLines: Show bid/ask price lines. Defaults to `false` when `nil`.
+    ///   - showAskLine: Show the Ask price line independently. `nil` falls back to the
+    ///     legacy `showBidAskLines` behavior.
+    ///   - showBidLine: Show the Bid price line independently. `nil` falls back to the
+    ///     legacy `showBidAskLines` behavior.
     ///   - showActLogo: Show the ActTrader watermark logo. Defaults to `false` when `nil`.
     ///   - showCandleCountdown: Show the candle countdown timer.
     ///   - candleCountdownTimeframes: Timeframes on which the countdown is shown. Pass `["all"]` to enable for all.
@@ -72,12 +76,18 @@ public class ActtraderChartsView: UIView {
     ///   - momentumThreshold: Minimum release velocity (px/ms) to trigger momentum. Defaults to `0.3` when `nil`.
     ///   - momentumMaxVelocity: Maximum launch velocity (px/ms) for momentum. Defaults to `6.0` when `nil`.
     ///   - targetCandleWidth: Target candle width in pixels. Defaults to 10 when `nil`.
-    ///   - tickClosePriceSource: Price source for tick close (`"bid"` or `"ask"`). Defaults to `"bid"` when `nil`.
+    ///   - tickClosePriceSource: Price source for tick close (`"bid"`, `"ask"`, or `"ltp"`).
+    ///     `"ltp"` builds live candles from the last traded price (exchange/dealing feeds);
+    ///     ticks without a valid LTP fall back to the bid. Defaults to `"bid"` when `nil`.
+    ///   - showLtpPrice: Show the LTP marker (dashed price line + axis tag). `nil` (default):
+    ///     shown only in `"ltp"` mode. `true`: always shown when the feed supplies an LTP.
+    ///     `false`: hidden even in `"ltp"` mode.
     ///   - tradesThresholdForHorizontalLine: Min trade count to render a horizontal level line.
     ///   - tradeDisplayFilter: Filter for which trade levels to display.
     ///   - positionRenderStyle: Render style for open positions.
     ///   - hideLevelConfirmCancel: Hide on-canvas confirm/cancel buttons on TFC level edits. Defaults to `false` when `nil`.
     ///   - deselectActiveOnOutsideClick: Dismiss a selected/active trade level when the user clicks/taps outside it (reverts pending edits). When `false` (default), the level is preserved across outside clicks — only ✓/✗ buttons, tapping the level itself, or removing it via `setLevels` dismiss it. Set to `true` to restore the legacy outside-click-to-cancel behavior. Defaults to `false` when `nil`.
+    ///   - showTradeLevelsAlways: Always render SL/TP bracket lines + price pills, even without hover. Defaults to `true`; pass `false` to hide them until hover/selection.
     ///   - showTradeLevelsAlways: Always render SL/TP bracket lines + price pills, even without hover. Defaults to `true`; pass `false` to show them only on hover/selection.
     ///   - showPriceAxisCountdown: Show candle countdown timer on the right price axis under the live price tag. Defaults to `false` when `nil`.
     ///   - tradeLevelButtonScale: Multiplier for trade-level Confirm/Cancel/Edit/Close button radii and gaps. Scales visuals AND hit/drag areas together — useful for larger touch targets. Clamped to `[1.0, 3.0]`. Defaults to `1.0` when `nil`.
@@ -107,6 +117,8 @@ public class ActtraderChartsView: UIView {
         showUI: Bool? = nil,
         showDrawingTools: Bool? = nil,
         showBidAskLines: Bool? = nil,
+        showAskLine: Bool? = nil,
+        showBidLine: Bool? = nil,
         showActLogo: Bool? = nil,
         showCandleCountdown: Bool? = nil,
         candleCountdownTimeframes: [String]? = nil,
@@ -126,6 +138,7 @@ public class ActtraderChartsView: UIView {
         momentumMaxVelocity: Double? = nil,
         targetCandleWidth: Double? = nil,
         tickClosePriceSource: String? = nil,
+        showLtpPrice: Bool? = nil,
         tradesThresholdForHorizontalLine: Int? = nil,
         tradeDisplayFilter: String? = nil,
         positionRenderStyle: String? = nil,
@@ -150,11 +163,16 @@ public class ActtraderChartsView: UIView {
         uiConfigJson: String? = nil,
         durationTimeframeMap: [String: String]? = nil,
         onSymbolClick: Bool? = nil,
+        /// When `true`, the `"mobile"` header renders an "Ask AI" (✦) button that
+        /// fires a `.askAiClick` event on tap. No effect in other header layouts.
+        onAskAiClick: Bool? = nil,
         /// IANA timezone string for time-axis and crosshair labels. Default: `"UTC"`.
         timezone: String? = nil,
         /// Top-bar variant. `"simple"` (default) is the classic TopBar; `"advanced"`
         /// is the pill-style AdvancedToolbar; `"compact"` is the slim per-pane
-        /// CompactToolbar (intended for cells of a host-rendered multi-pane grid).
+        /// CompactToolbar (intended for cells of a host-rendered multi-pane grid);
+        /// `"mobile"` renders the compact mobile header (Tools · timeframe pills ·
+        /// optional Ask AI button).
         headerLayout: String? = nil,
         /// Enables the chart-owned multi-layout popover (Layout button → 26 preset
         /// picker + cross-pane sync toggles). Fires `layoutChange` events; the host
@@ -239,6 +257,8 @@ public class ActtraderChartsView: UIView {
             showUI: showUI,
             showDrawingTools: showDrawingTools,
             showBidAskLines: showBidAskLines,
+            showAskLine: showAskLine,
+            showBidLine: showBidLine,
             showActLogo: showActLogo,
             showCandleCountdown: showCandleCountdown,
             candleCountdownTimeframes: candleCountdownTimeframes,
@@ -253,6 +273,7 @@ public class ActtraderChartsView: UIView {
             momentumMaxVelocity: momentumMaxVelocity,
             targetCandleWidth: targetCandleWidth,
             tickClosePriceSource: tickClosePriceSource,
+            showLtpPrice: showLtpPrice,
             tradesThresholdForHorizontalLine: tradesThresholdForHorizontalLine,
             tradeDisplayFilter: tradeDisplayFilter,
             positionRenderStyle: positionRenderStyle,
@@ -276,6 +297,7 @@ public class ActtraderChartsView: UIView {
             uiConfigJson: uiConfigJson,
             durationTimeframeMap: durationTimeframeMap,
             onSymbolClick: onSymbolClick,
+            onAskAiClick: onAskAiClick,
             timezone: timezone,
             headerLayout: headerLayout,
             enableMultipleLayouts: enableMultipleLayouts,
@@ -395,6 +417,10 @@ public class ActtraderChartsView: UIView {
     /// Called when the user taps the symbol name and `onSymbolClick` was enabled in the init command.
     public var onSymbolClick: ((BridgeEvent) -> Void)?
 
+    /// Called when the user taps the "Ask AI" (✦) button in the mobile header and
+    /// `onAskAiClick` was enabled in the init command (only meaningful with `headerLayout: "mobile"`).
+    public var onAskAiClick: ((BridgeEvent) -> Void)?
+
     /// Called when the user picks a layout preset or toggles a cross-pane sync
     /// option in the chart-owned multi-layout popover. Fires only when
     /// `enableMultipleLayouts = true` was passed to the initialiser.
@@ -474,8 +500,19 @@ public class ActtraderChartsView: UIView {
     /// Pushes a live tick for streaming updates.
     ///
     /// The bridge aggregates ticks into the current candle; use `loadData(_:)` for bulk replacement.
-    public func pushTick(bid: Double, ask: Double, timestamp: Int64) {
-        sendCommand(.pushTick(bid: bid, ask: ask, timestamp: timestamp))
+    ///
+    /// - Parameters:
+    ///   - ltp: Last traded price — optional, sent by exchange/dealing feeds and
+    ///     consumed when `tickClosePriceSource == "ltp"`; ticks without it fall back to the bid.
+    ///   - ltpv: Last traded volume — optional, accompanies `ltp` on trade ticks.
+    public func pushTick(bid: Double, ask: Double, timestamp: Int64, ltp: Double? = nil, ltpv: Double? = nil) {
+        sendCommand(.pushTick(bid: bid, ask: ask, timestamp: timestamp, ltp: ltp, ltpv: ltpv))
+    }
+
+    /// Shows/hides the LTP (last traded price) marker — dashed line + axis tag.
+    /// Pass `nil` to restore the default (shown only when `tickClosePriceSource == "ltp"`).
+    public func setShowLtpPrice(_ show: Bool? = nil) {
+        sendCommand(.setShowLtpPrice(show: show))
     }
 
     /// Changes the active timeframe (e.g. `"1m"`, `"1h"`, `"1D"`).
@@ -904,6 +941,7 @@ public class ActtraderChartsView: UIView {
             onUiStateChange?(event)
         case .dataRequest:         onDataRequest?(event)
         case .symbolClick:         onSymbolClick?(event)
+        case .askAiClick:          onAskAiClick?(event)
         case .layoutChange:        onLayoutChange?(event)
         case .snapshot:            onSnapshot?(event)
         case .compareDataRequest:  onCompareDataRequest?(event)
