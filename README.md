@@ -289,7 +289,7 @@ chart.initialize(
 | `setSeries(_:)` | `"candlestick"`, `"line"`, `"area"`, `"ohlc"`, `"hollow_candle"` |
 | `setTimeframe(_:)` | `"1m"` `"5m"` `"15m"` `"30m"` `"1h"` `"4h"` `"1D"` `"1W"` `"1M"` `"1Y"` |
 | `setDuration(_:timeframe:)` | Select a duration (`"1D"` `"5D"` `"1M"` `"3M"` `"6M"` `"1Y"` `"5Y"` `"All"`) and refetch. The timeframe is paired from `durationTimeframeMap` unless given. The x-axis rescales from the new bars — no reinitialisation needed |
-| `setBracketLabelMode(_:currencySymbol:)` | `"price"` (default) or `"amount"` — whether SL/TP pills show the bracket price or the money it is worth |
+| `setBracketLabelMode(_:currencySymbol:)` | `"price"` (default), `"amount"`, or `"priceAndAmount"` — whether SL/TP pills show the bracket price, the money it is worth, or the price with the currency symbol plus the P/L while dragging |
 | `setSymbol(_:)` | Updates the symbol name in the top bar |
 | `addIndicator(_:params:)` | `"SMA"`, `"EMA"`, `"RSI"`, `"BB"`, etc. Parameterized studies add a **new instance** per call; observe `onIndicatorAdded` for its `instanceId` |
 | `removeIndicator(_:)` | Remove a study — pass an `instanceId` (e.g. `"EMA#3"`) for one instance, or a short name (e.g. `"EMA"`) for all instances of that study |
