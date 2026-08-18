@@ -108,6 +108,8 @@ public enum BridgeCommand {
         /// Scales visuals AND hit/drag areas together — useful for touch targets.
         /// Clamped to `[1.0, 3.0]`. Default: `1.0`.
         tradeLevelButtonScale: Double?,
+        bracketLabelMode: String?,
+        currencySymbol: String?,
         levelClusteringEnabled: Bool?,
         clusterThresholdDistance: Int?,
         /// Enable TFC toggle button in the top bar. When `false`, TFC is completely disabled. Default: `true`.
@@ -201,6 +203,13 @@ public enum BridgeCommand {
 
     /// Changes the active timeframe (e.g. `"1m"`, `"1h"`, `"1D"`).
     case setTimeframe(String)
+
+    /// Selects a duration and refetches; the timeframe is paired automatically
+    /// unless one is supplied. The x-axis rescales from the new bars.
+    case setDuration(duration: String, timeframe: String?)
+
+    /// Switches SL/TP pills between the bracket price and the money it is worth.
+    case setBracketLabelMode(mode: String, currencySymbol: String?)
 
     /// Updates the displayed symbol name.
     case setSymbol(String)
@@ -396,6 +405,8 @@ public enum BridgeCommand {
                              hideLevelConfirmCancel, deselectActiveOnOutsideClick,
                              showTradeLevelsAlways, showPriceAxisCountdown,
                              tradeLevelButtonScale,
+                             bracketLabelMode,
+                             currencySymbol,
                              levelClusteringEnabled, clusterThresholdDistance,
                              tfcEnabled, showSettings, showFullscreenButton,
                              hideSymbolAndTick, hideOHLCV, showBottomBar,
@@ -440,6 +451,8 @@ public enum BridgeCommand {
             if let showTradeLevelsAlways { payload["showTradeLevelsAlways"] = showTradeLevelsAlways }
             if let showPriceAxisCountdown { payload["showPriceAxisCountdown"] = showPriceAxisCountdown }
             if let tradeLevelButtonScale { payload["tradeLevelButtonScale"] = tradeLevelButtonScale }
+            if let bracketLabelMode { payload["bracketLabelMode"] = bracketLabelMode }
+            if let currencySymbol { payload["currencySymbol"] = currencySymbol }
             if let levelClusteringEnabled { payload["levelClusteringEnabled"] = levelClusteringEnabled }
             if let clusterThresholdDistance { payload["clusterThresholdDistance"] = clusterThresholdDistance }
             if let tfcEnabled { payload["tfcEnabled"] = tfcEnabled }
@@ -505,6 +518,16 @@ public enum BridgeCommand {
 
         case let .setTimeframe(timeframe):
             envelope = ["type": "setTimeframe", "payload": ["timeframe": timeframe]]
+
+        case let .setDuration(duration, timeframe):
+            var payload: [String: Any] = ["duration": duration]
+            if let timeframe { payload["timeframe"] = timeframe }
+            envelope = ["type": "setDuration", "payload": payload]
+
+        case let .setBracketLabelMode(mode, currencySymbol):
+            var payload: [String: Any] = ["mode": mode]
+            if let currencySymbol { payload["currencySymbol"] = currencySymbol }
+            envelope = ["type": "setBracketLabelMode", "payload": payload]
 
         case let .setSymbol(symbol):
             envelope = ["type": "setSymbol", "payload": ["symbol": symbol]]

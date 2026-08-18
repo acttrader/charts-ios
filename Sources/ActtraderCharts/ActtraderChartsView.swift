@@ -91,6 +91,8 @@ public class ActtraderChartsView: UIView {
     ///   - showTradeLevelsAlways: Always render SL/TP bracket lines + price pills, even without hover. Defaults to `true`; pass `false` to show them only on hover/selection.
     ///   - showPriceAxisCountdown: Show candle countdown timer on the right price axis under the live price tag. Defaults to `false` when `nil`.
     ///   - tradeLevelButtonScale: Multiplier for trade-level Confirm/Cancel/Edit/Close button radii and gaps. Scales visuals AND hit/drag areas together — useful for larger touch targets. Clamped to `[1.0, 3.0]`. Defaults to `1.0` when `nil`.
+    ///   - bracketLabelMode: `"price"` (default) or `"amount"` — whether SL/TP pills show the bracket price or the money it is worth.
+    ///   - currencySymbol: Symbol for SL/TP amounts when `bracketLabelMode` is `"amount"`. Defaults to `"$"`.
     ///   - showSettings: Show the settings gear button in the top bar. Set to `false` to hide it entirely. Defaults to `true` when `nil`.
     ///   - hideSymbolAndTick: Hide the symbol name and tick-activity (streaming) dot in the top-left overlay. Does **not** affect the OHLC(V) strip — use `hideOHLCV` for that. Defaults to `false` when `nil`.
     ///   - hideOHLCV: Hide the OHLC(V) data strip (`O: H: L: C: V:`) in the top-left overlay. Independent of `hideSymbolAndTick` — set both to `true` to hide the entire overlay. Defaults to `false` when `nil`.
@@ -147,6 +149,8 @@ public class ActtraderChartsView: UIView {
         showTradeLevelsAlways: Bool? = true,
         showPriceAxisCountdown: Bool? = nil,
         tradeLevelButtonScale: Double? = nil,
+        bracketLabelMode: String? = nil,
+        currencySymbol: String? = nil,
         levelClusteringEnabled: Bool? = nil,
         clusterThresholdDistance: Int? = nil,
         tfcEnabled: Bool? = nil,
@@ -282,6 +286,8 @@ public class ActtraderChartsView: UIView {
             showTradeLevelsAlways: showTradeLevelsAlways,
             showPriceAxisCountdown: showPriceAxisCountdown,
             tradeLevelButtonScale: tradeLevelButtonScale,
+            bracketLabelMode: bracketLabelMode,
+            currencySymbol: currencySymbol,
             levelClusteringEnabled: levelClusteringEnabled,
             clusterThresholdDistance: clusterThresholdDistance,
             tfcEnabled: tfcEnabled,
@@ -518,6 +524,22 @@ public class ActtraderChartsView: UIView {
     /// Changes the active timeframe (e.g. `"1m"`, `"1h"`, `"1D"`).
     public func setTimeframe(_ timeframe: String) {
         sendCommand(.setTimeframe(timeframe))
+    }
+
+    /// Selects a chart duration (`"1D"`, `"5D"`, `"1M"`, `"3M"`, `"6M"`, `"1Y"`,
+    /// `"5Y"`, `"All"`) and refetches. The timeframe is paired automatically
+    /// unless `timeframe` is supplied. The x-axis rescales from the new bars, so
+    /// the chart never needs reinitialising when the interval changes.
+    public func setDuration(_ duration: String, timeframe: String? = nil) {
+        sendCommand(.setDuration(duration: duration, timeframe: timeframe))
+    }
+
+    /// Switches the SL/TP bracket pills between the bracket price (`"price"`,
+    /// the default) and the money that bracket is worth (`"amount"`, e.g.
+    /// `SL -$290.80`). Amount mode needs each level to carry `lots` plus
+    /// `contractSize` / `valuePerPoint`; levels without them keep showing prices.
+    public func setBracketLabelMode(_ mode: String, currencySymbol: String? = nil) {
+        sendCommand(.setBracketLabelMode(mode: mode, currencySymbol: currencySymbol))
     }
 
     /// Updates the displayed symbol name in the chart's top bar.

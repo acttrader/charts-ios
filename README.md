@@ -77,6 +77,38 @@ NSLayoutConstraint.activate([
 ])
 ```
 
+### SL/TP amounts instead of prices
+
+By default the SL/TP pills read `SL 4159.00`. Pass `bracketLabelMode: "amount"`
+and they read `SL -$290.80` — what the position gains or loses if that bracket
+is hit, with the currency symbol in front.
+
+The chart has no access to contract specs, so each level supplies what the maths
+needs. These go in the level dictionaries you already pass to `setLevels`:
+
+| key | meaning |
+|---|---|
+| `contractSize` | Units per lot — `100` for XAUUSD, `100000` for most FX pairs |
+| `valuePerPoint` | Account-currency value of one price unit, folding in any quote → account conversion. Default `1` |
+| `currencySymbol` | Per-level override of the chart-wide `currencySymbol` |
+
+```swift
+let chart = ActtraderChartsView(theme: "dark", bracketLabelMode: "amount", currencySymbol: "$")
+
+chart.setLevels([[
+    "label": "POS-1", "price": 4173.54, "side": "buy", "lots": 0.20,
+    "stopLossPrice": 4159.00, "takeProfitPrice": 4183.00,
+    "contractSize": 100, "valuePerPoint": 1,
+]], labelKey: "label", priceKey: "price", type: "position")
+// pills render: SL -$290.80   TP +$189.20
+```
+
+`amount = (bracket − entry) × direction × lots × contractSize × valuePerPoint`
+
+A level missing `lots` or `contractSize` keeps showing its price, so a partial
+rollout degrades level by level rather than rendering `NaN`. Switch at runtime
+with `setBracketLabelMode("amount")`.
+
 ### Pre-warming (optional, recommended)
 
 Call `prewarm()` before the chart screen appears to absorb the WKWebView process startup cost (200–400 ms):
@@ -130,6 +162,8 @@ ActtraderChartsView.prewarm()
 | `showTradeLevelsAlways` | `Bool?` | `true` | Always render SL/TP bracket lines + price pills, even when the parent level isn't hovered or selected. Close (×) buttons stay hover-only. Pass `false` to hide them until hover/selection. Toggleable from the in-chart Settings dialog (Trading tab). |
 | `showTradeLevelsAlways` | `Bool?` | `true` | Always render SL/TP bracket lines + price pills, even when the parent level isn't hovered or selected. Close (×) buttons stay hover-only. Pass `false` to show them only on hover/selection. Toggleable from the in-chart Settings dialog (Trading tab). |
 | `tradeLevelButtonScale` | `Double?` | `nil` (`1.0`) | Multiplier for trade-level Confirm/Cancel/Edit/Close button radii and gaps. Scales visuals **and** hit/drag areas together — raise it on touch devices for easier tapping. Clamped to `[1.0, 3.0]` |
+| `bracketLabelMode` | `String?` | `nil` (`"price"`) | `"amount"` makes SL/TP pills show the money at the bracket instead of its price — see below |
+| `currencySymbol` | `String?` | `nil` (`"$"`) | Symbol for SL/TP amounts when `bracketLabelMode` is `"amount"` |
 | `levelClusteringEnabled` | `Bool?` | `true` | Enable trade-level fan-out clustering; overlapping levels group into expandable badges |
 | `clusterThresholdDistance` | `Int?` | `20` | Pixel proximity threshold for clustering (only when `levelClusteringEnabled` is `true`) |
 | `hideQtyButton` | `Bool?` | `nil` | Hide the floating Qty input overlay on draft orders |
@@ -254,6 +288,8 @@ chart.initialize(
 | `setTheme(_:)` | `"dark"` or `"light"` |
 | `setSeries(_:)` | `"candlestick"`, `"line"`, `"area"`, `"ohlc"`, `"hollow_candle"` |
 | `setTimeframe(_:)` | `"1m"` `"5m"` `"15m"` `"30m"` `"1h"` `"4h"` `"1D"` `"1W"` `"1M"` `"1Y"` |
+| `setDuration(_:timeframe:)` | Select a duration (`"1D"` `"5D"` `"1M"` `"3M"` `"6M"` `"1Y"` `"5Y"` `"All"`) and refetch. The timeframe is paired from `durationTimeframeMap` unless given. The x-axis rescales from the new bars — no reinitialisation needed |
+| `setBracketLabelMode(_:currencySymbol:)` | `"price"` (default), `"amount"`, or `"priceAndAmount"` — whether SL/TP pills show the bracket price, the money it is worth, or the price with the currency symbol plus the P/L while dragging |
 | `setSymbol(_:)` | Updates the symbol name in the top bar |
 | `addIndicator(_:params:)` | `"SMA"`, `"EMA"`, `"RSI"`, `"BB"`, etc. Parameterized studies add a **new instance** per call; observe `onIndicatorAdded` for its `instanceId` |
 | `removeIndicator(_:)` | Remove a study — pass an `instanceId` (e.g. `"EMA#3"`) for one instance, or a short name (e.g. `"EMA"`) for all instances of that study |
