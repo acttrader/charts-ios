@@ -657,6 +657,15 @@ public class ActtraderChartsView: UIView {
         sendCommand(.updateLevelMainPrice(label: label, price: price))
     }
 
+    /// Update the quantity shown on an existing level's pill — the counterpart of
+    /// `updateLevelMainPrice(_:price:)` for lots. Call it when your modify panel
+    /// changes the size, so the chart stops showing the broker's old quantity while
+    /// the modify is in flight. Staged like a chart-side qty edit: it survives
+    /// `setLevels` refreshes and is reverted by `cancelCurrentEdit()`.
+    public func updateLevelQty(_ label: String, qty: Double) {
+        sendCommand(.updateLevelQty(label: label, qty: qty))
+    }
+
     /// Updates or removes a SL/TP bracket on an existing level.
     /// - Parameter bracketType: `"sl"` or `"tp"`.
     /// - Parameter price: Pass `nil` to remove the bracket.
