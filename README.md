@@ -304,6 +304,7 @@ chart.initialize(
 | `setLevels(_:labelKey:priceKey:type:pnlKey:pnlTextKey:)` | Replace all levels of a given type; pass `[]` to clear |
 | `removeLevelByLabel(_:)` | Remove a single level by label |
 | `updateLevelMainPrice(label:price:)` | Update the entry price of an existing level. Stages the edit in the chart's pending-edit buffer so it survives subsequent `setLevels` refreshes (e.g. per-tick PnL updates) until the server echoes the new price or `cancelLevelEdit` / `cancelCurrentEdit` is called. Call `cancelLevelEdit(label)` when your modify panel closes without submitting, otherwise the staged edit keeps overriding server state on the chart |
+| `updateLevelQty(_:qty:)` | Update the quantity on an existing level's pill when your modify panel changes the size — stops the chart showing the broker's old lots while the modify is in flight. Staged like a chart-side qty edit: survives `setLevels` refreshes and is reverted by `cancelCurrentEdit()` |
 | `updateLevelBracket(label:bracketType:price:)` | Update or remove a SL/TP bracket on an existing level; pass `nil` price to remove. Same staging semantics as `updateLevelMainPrice` |
 | `addLevelBracket(label:bracketType:)` | Auto-place a SL or TP bracket at a default price offset; fires `onTradeLevelBracketActivated` with the computed price |
 | `addBracket(bracketType:label:)` | Unified auto-price bracket placement — pass `label` for an existing order/position, omit it for the active draft order; fires `onTradeLevelBracketActivated` (`label` is `""` for drafts — check `label.isEmpty`) |

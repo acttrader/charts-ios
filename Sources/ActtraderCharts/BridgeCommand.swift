@@ -276,6 +276,9 @@ public enum BridgeCommand {
     /// Updates the entry price of an existing level.
     case updateLevelMainPrice(label: String, price: Double)
 
+    /// Mirrors a quantity change from the host's modify panel onto the level's pill.
+    case updateLevelQty(label: String, qty: Double)
+
     /// Updates or removes a SL/TP bracket on an existing level.
     /// Pass `nil` for `price` to remove the bracket.
     /// - Parameter bracketType: `"sl"` or `"tp"`.
@@ -584,6 +587,11 @@ public enum BridgeCommand {
 
         case let .updateLevelMainPrice(label, price):
             envelope = ["type": "updateLevelMainPrice", "payload": ["label": label, "price": price]]
+
+
+        case let .updateLevelQty(label, qty):
+
+            envelope = ["type": "updateLevelQty", "payload": ["label": label, "qty": qty]]
 
         case let .updateLevelBracket(label, bracketType, price):
             let priceValue: Any = price ?? NSNull()
