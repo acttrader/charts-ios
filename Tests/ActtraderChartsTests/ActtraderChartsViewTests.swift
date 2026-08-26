@@ -43,6 +43,8 @@ final class BridgeCommandTests: XCTestCase {
             showTradeLevelsAlways: nil,
             showPriceAxisCountdown: nil,
             tradeLevelButtonScale: nil,
+            bracketLabelMode: nil,
+            currencySymbol: nil,
             levelClusteringEnabled: nil,
             clusterThresholdDistance: nil,
             tfcEnabled: nil,
@@ -65,7 +67,8 @@ final class BridgeCommandTests: XCTestCase {
             enableSnapshot: nil,
             hideHeader: nil,
             initialCompares: nil,
-            maxCompares: nil
+            maxCompares: nil,
+            layoutSync: nil
         )
         let obj = try parseJSON(cmd.jsonString)
         XCTAssertEqual(obj["type"] as? String, "init")
@@ -93,6 +96,7 @@ final class BridgeCommandTests: XCTestCase {
             positionRenderStyle: nil, hideLevelConfirmCancel: nil,
             deselectActiveOnOutsideClick: nil, showTradeLevelsAlways: nil,
             showPriceAxisCountdown: nil, tradeLevelButtonScale: nil,
+            bracketLabelMode: nil, currencySymbol: nil,
             levelClusteringEnabled: nil, clusterThresholdDistance: nil,
             tfcEnabled: nil, showSettings: nil, showFullscreenButton: false,
             hideSymbolAndTick: nil, hideOHLCV: nil, showBottomBar: nil,
@@ -101,7 +105,8 @@ final class BridgeCommandTests: XCTestCase {
             onSymbolClick: nil, onAskAiClick: nil, timezone: nil, headerLayout: nil,
             enableMultipleLayouts: nil, enableSnapshot: nil, hideHeader: nil,
             initialCompares: ["MSFT", "GOOG"],
-            maxCompares: 4
+            maxCompares: 4,
+            layoutSync: nil
         )
         let obj = try parseJSON(cmd.jsonString)
         let payload = try XCTUnwrap(obj["payload"] as? [String: Any])
