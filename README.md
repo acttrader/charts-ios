@@ -154,6 +154,7 @@ ActtraderChartsView.prewarm()
 | `targetCandleWidth` | `Double?` | `nil` | Target px width per candle for auto-calculating initial bar count |
 | `tickClosePriceSource` | `String?` | `nil` | `"bid"` (default), `"ask"`, or `"ltp"` for live tick close/high/low. `"ltp"` builds candles from the last traded price (exchange/dealing feeds); ticks without a valid LTP fall back to the bid |
 | `showLtpPrice` | `Bool?` | `nil` | Show the LTP marker (dashed price line + axis tag). `nil`: shown only in `"ltp"` mode. `true`: always shown when the feed supplies an LTP. `false`: hidden even in `"ltp"` mode |
+| `priceSourceSelector` | `[String]?` | `nil` | Show a price-source dropdown in the chart header listing these sources, e.g. `["ltp", "bid"]` (dealing feeds). A user pick switches the live candle source and fires `onPriceSourceChange`. Hidden when `nil`/empty |
 | `tradesThresholdForHorizontalLine` | `Int?` | `nil` | Level count above which render auto-switches to dot mode |
 | `tradeDisplayFilter` | `String?` | `nil` | Which TFC levels are visible: `"all"` · `"positions"` · `"orders"` · `"none"` |
 | `positionRenderStyle` | `String?` | `nil` | Force position render style: `"line"` or `"dot"` |
@@ -285,6 +286,7 @@ chart.initialize(
 | `loadData(_ bars:, fitAll:)` | Replaces the full dataset |
 | `pushTick(bid:ask:timestamp:ltp:ltpv:)` | Streams a live tick. `ltp`/`ltpv` (last traded price/volume) are optional — sent by exchange/dealing feeds and used when `tickClosePriceSource == "ltp"`, e.g. `chart.pushTick(bid: 1.2055, ask: 1.2057, timestamp: ts, ltp: 1.2056, ltpv: 120)` |
 | `setShowLtpPrice(_:)` | Show/hide the LTP price marker at runtime; pass `nil` to restore the default (marker follows `tickClosePriceSource == "ltp"`) |
+| `setTickClosePriceSource(_:)` | Switch which price drives live candle close/high/low at runtime (`"bid"`, `"ask"` or `"ltp"`); also syncs the header price-source dropdown when `priceSourceSelector` is enabled |
 | `setTheme(_:)` | `"dark"` or `"light"` |
 | `setSeries(_:)` | `"candlestick"`, `"line"`, `"area"`, `"ohlc"`, `"hollow_candle"` |
 | `setTimeframe(_:)` | `"1m"` `"5m"` `"15m"` `"30m"` `"1h"` `"4h"` `"1D"` `"1W"` `"1M"` `"1Y"` |
@@ -364,6 +366,7 @@ chart.loadData(bars)
 | `onBarClick` | User tapped a bar |
 | `onViewportChange` | Pan or zoom changed |
 | `onSeriesChange` | Series type changed |
+| `onPriceSourceChange` | User picked a price source (BID / ASK / LTP) from the header dropdown (`priceSourceSelector`) |
 | `onTimeframeChange` | Timeframe changed |
 | `onDurationChange` | Duration changed |
 | `onStateChange` | Any state mutation |

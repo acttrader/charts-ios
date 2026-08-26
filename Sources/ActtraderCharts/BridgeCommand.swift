@@ -85,6 +85,10 @@ public enum BridgeCommand {
         targetCandleWidth: Double?,
         tickClosePriceSource: String?,
         showLtpPrice: Bool?,
+        /// Show a price-source dropdown in the chart header listing these sources,
+        /// e.g. `["ltp", "bid"]` (dealing feeds). A user pick switches the live
+        /// candle source and emits `priceSourceChange`. Hidden when `nil` or empty.
+        priceSourceSelector: [String]?,
         tradesThresholdForHorizontalLine: Int?,
         tradeDisplayFilter: String?,
         positionRenderStyle: String?,
@@ -178,6 +182,11 @@ public enum BridgeCommand {
     /// Shows/hides the LTP price marker at runtime. Pass `nil` to restore the
     /// default (marker follows `tickClosePriceSource == "ltp"`).
     case setShowLtpPrice(show: Bool?)
+
+    /// Switches which price drives live candle close/high/low at runtime
+    /// (`"bid"`, `"ask"` or `"ltp"`). Also syncs the header price-source
+    /// dropdown when `priceSourceSelector` is enabled.
+    case setTickClosePriceSource(source: String)
 
     /// Backward-compatible factory matching the pre-LTP `pushTick` shape.
     public static func pushTick(bid: Double, ask: Double, timestamp: Int64) -> BridgeCommand {
@@ -403,7 +412,7 @@ public enum BridgeCommand {
                              maxSubPanes, mobileBarDivisor,
                              minInitialBars, maxLookbackMs,
                              momentumScrollEnabled, momentumDecay, momentumThreshold, momentumMaxVelocity,
-                             targetCandleWidth, tickClosePriceSource, showLtpPrice,
+                             targetCandleWidth, tickClosePriceSource, showLtpPrice, priceSourceSelector,
                              tradesThresholdForHorizontalLine, tradeDisplayFilter, positionRenderStyle,
                              hideLevelConfirmCancel, deselectActiveOnOutsideClick,
                              showTradeLevelsAlways, showPriceAxisCountdown,
@@ -446,6 +455,7 @@ public enum BridgeCommand {
             if let targetCandleWidth { payload["targetCandleWidth"] = targetCandleWidth }
             if let tickClosePriceSource { payload["tickClosePriceSource"] = tickClosePriceSource }
             if let showLtpPrice { payload["showLtpPrice"] = showLtpPrice }
+            if let priceSourceSelector { payload["priceSourceSelector"] = priceSourceSelector }
             if let tradesThresholdForHorizontalLine { payload["tradesThresholdForHorizontalLine"] = tradesThresholdForHorizontalLine }
             if let tradeDisplayFilter { payload["tradeDisplayFilter"] = tradeDisplayFilter }
             if let positionRenderStyle { payload["positionRenderStyle"] = positionRenderStyle }
@@ -506,6 +516,9 @@ public enum BridgeCommand {
             var showPayload: [String: Any] = [:]
             if let show { showPayload["show"] = show }
             envelope = ["type": "setShowLtpPrice", "payload": showPayload]
+
+        case let .setTickClosePriceSource(source):
+            envelope = ["type": "setTickClosePriceSource", "payload": ["source": source]]
 
         case let .setTheme(theme):
             envelope = ["type": "setTheme", "payload": ["theme": theme]]
