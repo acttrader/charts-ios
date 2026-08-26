@@ -226,8 +226,10 @@ final class BridgeCommandTests: XCTestCase {
         let json = """
         {
           "type": "crosshair",
-          "bar": {"time": 1700000000000, "open": 1.1, "high": 1.2, "low": 1.0, "close": 1.15, "volume": 1000},
-          "position": {"x": 100.5, "y": 200.0}
+          "payload": {
+            "bar": {"time": 1700000000000, "open": 1.1, "high": 1.2, "low": 1.0, "close": 1.15, "volume": 1000},
+            "position": {"x": 100.5, "y": 200.0}
+          }
         }
         """
         let event = BridgeEvent.parse(json)
@@ -247,7 +249,7 @@ final class BridgeCommandTests: XCTestCase {
 
     func testParseViewportChangeEvent() {
         let json = """
-        {"type":"viewportChange","viewport":{"startIndex":0,"endIndex":99,"barWidth":8.5}}
+        {"type":"viewportChange","payload":{"viewport":{"startIndex":0,"endIndex":99,"barWidth":8.5}}}
         """
         let event = BridgeEvent.parse(json)
         guard case let .viewportChange(start, end, barWidth) = event else {
@@ -260,7 +262,7 @@ final class BridgeCommandTests: XCTestCase {
     }
 
     func testParseDataLoadedEvent() {
-        let json = #"{"type":"dataLoaded","barCount":250}"#
+        let json = #"{"type":"dataLoaded","payload":{"barCount":250}}"#
         let event = BridgeEvent.parse(json)
         guard case let .dataLoaded(count) = event else {
             XCTFail("Expected .dataLoaded, got \(String(describing: event))")
@@ -270,7 +272,7 @@ final class BridgeCommandTests: XCTestCase {
     }
 
     func testParseErrorEvent() {
-        let json = #"{"type":"error","message":"Engine crash","code":"E001"}"#
+        let json = #"{"type":"error","payload":{"message":"Engine crash","code":"E001"}}"#
         let event = BridgeEvent.parse(json)
         guard case let .error(message, code) = event else {
             XCTFail("Expected .error, got \(String(describing: event))")
