@@ -11,6 +11,10 @@ env:
 jobs:
   test-and-release:
     runs-on: macos-14
+    # softprops/action-gh-release needs a writable token — without this the
+    # default read-only GITHUB_TOKEN 403s on "Create GitHub Release".
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v6
