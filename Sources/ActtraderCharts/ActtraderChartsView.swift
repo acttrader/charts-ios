@@ -82,6 +82,9 @@ public class ActtraderChartsView: UIView {
     ///   - showLtpPrice: Show the LTP marker (dashed price line + axis tag). `nil` (default):
     ///     shown only in `"ltp"` mode. `true`: always shown when the feed supplies an LTP.
     ///     `false`: hidden even in `"ltp"` mode.
+    ///   - priceSourceSelector: Show a price-source dropdown in the chart header listing these
+    ///     sources, e.g. `["ltp", "bid"]` (dealing feeds). A user pick switches the live candle
+    ///     source and fires `onPriceSourceChange`. Hidden when `nil` or empty.
     ///   - tradesThresholdForHorizontalLine: Min trade count to render a horizontal level line.
     ///   - tradeDisplayFilter: Filter for which trade levels to display.
     ///   - positionRenderStyle: Render style for open positions.
@@ -139,6 +142,7 @@ public class ActtraderChartsView: UIView {
         targetCandleWidth: Double? = nil,
         tickClosePriceSource: String? = nil,
         showLtpPrice: Bool? = nil,
+        priceSourceSelector: [String]? = nil,
         tradesThresholdForHorizontalLine: Int? = nil,
         tradeDisplayFilter: String? = nil,
         positionRenderStyle: String? = nil,
@@ -274,6 +278,7 @@ public class ActtraderChartsView: UIView {
             targetCandleWidth: targetCandleWidth,
             tickClosePriceSource: tickClosePriceSource,
             showLtpPrice: showLtpPrice,
+            priceSourceSelector: priceSourceSelector,
             tradesThresholdForHorizontalLine: tradesThresholdForHorizontalLine,
             tradeDisplayFilter: tradeDisplayFilter,
             positionRenderStyle: positionRenderStyle,
@@ -342,6 +347,10 @@ public class ActtraderChartsView: UIView {
 
     /// Called when the active series type changes.
     public var onSeriesChange: ((BridgeEvent) -> Void)?
+
+    /// Called when the user picks a price source (BID / ASK / LTP) from the
+    /// header dropdown (`priceSourceSelector`) — persist it host-side if desired.
+    public var onPriceSourceChange: ((BridgeEvent) -> Void)?
 
     /// Called when the active timeframe changes.
     public var onTimeframeChange: ((BridgeEvent) -> Void)?
@@ -513,6 +522,14 @@ public class ActtraderChartsView: UIView {
     /// Pass `nil` to restore the default (shown only when `tickClosePriceSource == "ltp"`).
     public func setShowLtpPrice(_ show: Bool? = nil) {
         sendCommand(.setShowLtpPrice(show: show))
+    }
+
+    /// Switches which price drives live candle close/high/low at runtime
+    /// (`"bid"`, `"ask"` or `"ltp"`). Also syncs the header price-source dropdown
+    /// when `priceSourceSelector` is enabled. Programmatic calls do not fire
+    /// `onPriceSourceChange` — that event fires only for user picks from the dropdown.
+    public func setTickClosePriceSource(_ source: String) {
+        sendCommand(.setTickClosePriceSource(source: source))
     }
 
     /// Changes the active timeframe (e.g. `"1m"`, `"1h"`, `"1D"`).
@@ -917,6 +934,7 @@ public class ActtraderChartsView: UIView {
         case .barClick:     onBarClick?(event)
         case .viewportChange: onViewportChange?(event)
         case .seriesChange: onSeriesChange?(event)
+        case .priceSourceChange: onPriceSourceChange?(event)
         case .timeframeChange: onTimeframeChange?(event)
         case .durationChange: onDurationChange?(event)
         case .stateChange:  onStateChange?(event)

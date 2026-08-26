@@ -31,6 +31,10 @@ public enum BridgeEvent {
     /// Active chart series type changed.
     case seriesChange(String)
 
+    /// User picked a price source (`"bid"`, `"ask"` or `"ltp"`) from the header
+    /// dropdown (`priceSourceSelector`) — persist it host-side if desired.
+    case priceSourceChange(String)
+
     /// Active timeframe changed.
     case timeframeChange(String)
 
@@ -220,6 +224,10 @@ public enum BridgeEvent {
         case "seriesChange":
             guard let series = p["series"] as? String else { return nil }
             return .seriesChange(series)
+
+        case "priceSourceChange":
+            guard let source = p["source"] as? String else { return nil }
+            return .priceSourceChange(source)
 
         case "timeframeChange":
             guard let tf = p["timeframe"] as? String else { return nil }
