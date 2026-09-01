@@ -114,6 +114,17 @@ public class ActtraderChartsView: UIView {
     public init(
         theme: String = "dark",
         symbol: String? = nil,
+        /// Contract specs for `symbol`. Lets the ruler report pips and money
+        /// instead of a bare price distance. Swap it with
+        /// ``setInstrument(_:)`` when the symbol changes.
+        instrument: InstrumentSpec? = nil,
+        /// Account equity and per-trade risk used to size the Long/Short
+        /// position tools. Keep it current with ``setAccount(_:)``.
+        account: AccountSpec? = nil,
+        /// Enable the reworked drawing tools as one switch: Long/Short Position
+        /// in a new Forecasting group, freehand Brush & Highlighter, and the full
+        /// Ruler readout. Default `false`.
+        enableForecasting: Bool? = nil,
         series: String? = nil,
         timeframe: String? = nil,
         duration: String? = nil,
@@ -316,7 +327,10 @@ public class ActtraderChartsView: UIView {
             hideHeader: hideHeader,
             initialCompares: initialCompares,
             maxCompares: maxCompares,
-            layoutSync: layoutSync
+            layoutSync: layoutSync,
+            instrument: instrument,
+            account: account,
+            enableForecasting: enableForecasting
         ))
 
         // Queue state restoration alongside the init command so both are evaluated
@@ -562,6 +576,22 @@ public class ActtraderChartsView: UIView {
     /// Updates the displayed symbol name in the chart's top bar.
     public func setSymbol(_ symbol: String) {
         sendCommand(.setSymbol(symbol))
+    }
+
+    /// Replaces the contract specs the measurement tools use to report pips and
+    /// money. Pair it with ``setSymbol(_:)``; pass `nil` to clear them.
+    ///
+    /// - SeeAlso: ``InstrumentSpec``
+    public func setInstrument(_ instrument: InstrumentSpec?) {
+        sendCommand(.setInstrument(instrument))
+    }
+
+    /// Updates the account equity and per-trade risk the Long/Short position
+    /// tools size against. Push it whenever equity moves; `nil` clears it.
+    ///
+    /// - SeeAlso: ``AccountSpec``
+    public func setAccount(_ account: AccountSpec?) {
+        sendCommand(.setAccount(account))
     }
 
     /// Adds a study by short name (e.g. `"SMA"`, `"EMA"`, `"RSI"`, `"BB"`).

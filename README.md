@@ -126,6 +126,9 @@ ActtraderChartsView.prewarm()
 |---|---|---|---|
 | `theme` | `String` | `"dark"` | `"dark"` or `"light"` |
 | `symbol` | `String?` | `nil` | Symbol name shown in the top bar (e.g. `"EURUSD"`) |
+| `instrument` | `InstrumentSpec?` | `nil` | Contract specs for `symbol` — see [Instrument specs](#instrument-specs) |
+| `account` | `AccountSpec?` | `nil` | Account equity and per-trade risk — see [Position tools](#position-tools) |
+| `enableForecasting` | `Bool?` | `nil` (`false`) | The reworked drawing tools, as one switch — see [Feature flags](#feature-flags) |
 | `series` | `String?` | `nil` | Initial chart type (e.g. `"candlestick"`, `"line"`, `"area"`, `"ohlc"`, `"hollow_candle"`) |
 | `timeframe` | `String?` | `nil` | Initial timeframe (e.g. `"1m"`, `"5m"`, `"1h"`, `"1D"`) |
 | `duration` | `String?` | `nil` | Initial duration button (e.g. `"1D"`, `"1M"`, `"1Y"`, `"All"`) |
@@ -293,6 +296,8 @@ chart.initialize(
 | `setDuration(_:timeframe:)` | Select a duration (`"1D"` `"5D"` `"1M"` `"3M"` `"6M"` `"1Y"` `"5Y"` `"All"`) and refetch. The timeframe is paired from `durationTimeframeMap` unless given. The x-axis rescales from the new bars — no reinitialisation needed |
 | `setBracketLabelMode(_:currencySymbol:)` | `"price"` (default), `"amount"`, or `"priceAndAmount"` — whether SL/TP pills show the bracket price, the money it is worth, or the price with the currency symbol plus the P/L while dragging |
 | `setSymbol(_:)` | Updates the symbol name in the top bar |
+| `setInstrument(_:)` | Contract specs used by the measurement tools — see [Instrument specs](#instrument-specs). Pair it with `setSymbol(_:)`; `nil` clears them |
+| `setAccount(_:)` | Account equity and per-trade risk used to size the position tools — see [Position tools](#position-tools). Push it whenever equity moves |
 | `addIndicator(_:params:)` | `"SMA"`, `"EMA"`, `"RSI"`, `"BB"`, etc. Parameterized studies add a **new instance** per call; observe `onIndicatorAdded` for its `instanceId` |
 | `removeIndicator(_:)` | Remove a study — pass an `instanceId` (e.g. `"EMA#3"`) for one instance, or a short name (e.g. `"EMA"`) for all instances of that study |
 | `setDrawingTool(_:)` | `"trend_line"`, `"horizontal_line"`, etc. — `nil` to deactivate |
@@ -610,3 +615,132 @@ To remove a bracket without a price: use `removeBracket(bracketType: "sl")` (dra
 
 - **`sync-chart.yml`**: Triggered by `repository_dispatch` from `acttrader/stockchart` on release. Opens a PR that updates `Sources/ActtraderCharts/Resources/chart.html`.
 - **`publish.yml`**: Triggered on `v*` tag push. Runs `swift test` on macOS and creates a GitHub Release (consumed by SPM consumers via git tag).
+
+---
+
+## Instrument specs
+
+The chart reads prices, never contract specs — so a tool that reports a distance
+in **pips**, or converts one to money, has to be told how.
+
+The **ruler** uses this. With specs it reads:
+
+```
+0.00455 (0.80%) 45.5
+43 bars, 9d 4h
+Vol 102.27K
+```
+
+Without them a pip figure is still shown, but inferred from how many decimals
+the feed quotes — the usual FX convention, which is wrong for metals, indices
+and crypto.
+
+```swift
+let chart = ActtraderChartsView(
+    theme: "dark",
+    symbol: "EURUSD",
+    instrument: InstrumentSpec(
+        pipSize: 0.0001,       // 0.01 for JPY crosses
+        contractSize: 100_000  // units per lot
+    )
+)
+
+// Specs belong to the instrument — swap them with the symbol.
+chart.setSymbol("USDJPY")
+chart.setInstrument(InstrumentSpec(pipSize: 0.01, contractSize: 100_000))
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `pipSize` | `Double?` | inferred | Price distance counted as one pip |
+| `contractSize` | `Double?` | `1` | Units per lot (`100` for XAUUSD, `100000` for most FX pairs) |
+| `valuePerPoint` | `Double?` | `1` | Account-currency value of one price unit per contract unit |
+| `currencySymbol` | `String?` | `"$"` | Prefixed to money figures |
+
+Every field is optional and the whole struct can be omitted — tools fall back to
+price-only readouts, so an existing integration keeps working untouched.
+
+When `pipSize` is absent it is inferred from how many decimals the feed quotes:
+five-decimal (`1.08531`) and three-decimal (`151.234`) feeds carry fractional
+pips, so the pip is the second-to-last digit; two- and four-decimal feeds quote
+whole pips. **That convention is wrong for metals, indices and crypto** — pass
+`pipSize` explicitly if pips matter.
+
+> A stale pip size reports a wrong number rather than failing visibly, so always
+> call `setInstrument(_:)` alongside `setSymbol(_:)`.
+
+## Freehand drawing
+
+`brush` and `highlighter` draw freehand: press, drag, release. The pointer path
+is sampled continuously and the finished stroke is thinned to the points that
+carry its shape. (`polyline` and `path` remain tap-per-point.)
+
+## Position tools
+
+`"longPosition"` and `"shortPosition"` sketch a trade that hasn't been placed:
+a green profit zone from entry to target, a red risk zone from entry to stop,
+and live readouts.
+
+```
+Target: 0.00313 (0.549%) 31.3, Amount: 5622.13
+Open PnL: 0.00146, Qty: 11323
+Risk/reward ratio: 1.84
+Stop: 0.00170 (0.298%) 17.0, Amount: 2887.5
+```
+
+Two taps place it — entry, then target — and the stop lands at a 2:1
+reward:risk to be dragged. All three prices have handles.
+
+Quantity is sized so hitting the stop costs exactly `riskPercent` of the
+account:
+
+```swift
+chart.setAccount(AccountSpec(size: 10_000, riskPercent: 1))
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `size` | `Double?` | — | Account equity in the account currency |
+| `riskPercent` | `Double?` | `1` | Percent of the account risked per trade |
+
+Omit it and the tools still draw — price, percent, pips and risk/reward all
+render; only quantity and money are left out. Money amounts and pips also need
+[Instrument specs](#instrument-specs).
+
+> **These are drawings, not orders.** Trade-From-Chart is what puts real broker
+> orders on the chart. Nothing on a position tool reaches the broker.
+>
+> A sketch drawn against a stale balance reports the wrong quantity rather than
+> failing visibly, so call `setAccount(_:)` whenever equity moves.
+
+## Feature flags
+
+The reworked drawing tools ship behind one init flag so each broker opts in.
+**It defaults to `false`** — an app that doesn't set it keeps exactly the toolbar
+it has today.
+
+```swift
+let chart = ActtraderChartsView(
+    theme: "dark",
+    symbol: "EURUSD",
+    enableForecasting: true
+)
+```
+
+`enableForecasting` turns on three things together:
+
+| | What it changes |
+|---|---|
+| **Position tools** | Adds **Long Position** / **Short Position** in a **Forecasting** group. Off, the group is not rendered at all |
+| **Freehand brush** | **Brush** and **Highlighter** draw freehand (press, drag, release). Off, they stay tap-per-point, ended by a double-tap |
+| **Detailed ruler** | **Ruler** reports percent, pips, duration and volume. Off, it reports bar count and raw price delta |
+
+One flag rather than three because they ship and roll back together. With it off
+the Forecasting group is absent from both the drawing toolbar and the mobile
+tools sheet.
+
+> Pass these ids to `setDrawingTool` exactly as written — `"longPosition"` /
+> `"shortPosition"`, camelCase. An unrecognised id silently draws a Trend Line.
+
+The position tools show quantity and money only with `account`; pips on both the
+position tools and the ruler come from `instrument`.

@@ -168,7 +168,21 @@ public enum BridgeCommand {
         /// toggles (only meaningful with `enableMultipleLayouts`). Partial — any
         /// `nil` field falls back to the library default. Change it later on a
         /// live chart via ``ActtraderChartsView/setLayoutSync(_:)``.
-        layoutSync: LayoutSync?
+        layoutSync: LayoutSync?,
+        /// Contract specs for `symbol` — pip size, contract size, money
+        /// conversion. Lets the ruler report pips instead of a bare price
+        /// distance. Swap it later via
+        /// ``ActtraderChartsView/setInstrument(_:)``.
+        instrument: InstrumentSpec?,
+        /// Account equity and per-trade risk used to size the Long/Short
+        /// position tools. Keep it current via
+        /// ``ActtraderChartsView/setAccount(_:)``.
+        account: AccountSpec?,
+        /// Enable the reworked drawing tools as one switch: Long/Short Position
+        /// in a new Forecasting group, freehand Brush & Highlighter, and the full
+        /// Ruler readout. Drawings only — nothing reaches the broker. Position
+        /// quantity/money need `account`; pips need `instrument`. Default: `false`.
+        enableForecasting: Bool?
     )
 
     /// Replaces the full dataset.
@@ -222,6 +236,14 @@ public enum BridgeCommand {
 
     /// Updates the displayed symbol name.
     case setSymbol(String)
+
+    /// Replaces the contract specs the measurement tools use to report pips and
+    /// money. Pair it with ``setSymbol(_:)``; pass `nil` to clear them.
+    case setInstrument(InstrumentSpec?)
+
+    /// Updates the account figures the Long/Short position tools size against.
+    /// Push it whenever equity moves; `nil` clears it.
+    case setAccount(AccountSpec?)
 
     // ── Studies / Drawings ────────────────────────────────────────────────────
 
@@ -425,9 +447,13 @@ public enum BridgeCommand {
                              aggregateFrom, canvasColorsJson, themeOverridesJson, labelsJson,
                              uiConfigJson, durationTimeframeMap, onSymbolClick, onAskAiClick, timezone,
                              headerLayout, enableMultipleLayouts, enableSnapshot, hideHeader,
-                             initialCompares, maxCompares, layoutSync):
+                             initialCompares, maxCompares, layoutSync, instrument, account,
+                             enableForecasting):
             var payload: [String: Any] = ["theme": theme]
             if let symbol { payload["symbol"] = symbol }
+            if let instrument { payload["instrument"] = instrument.toDictionary() }
+            if let account { payload["account"] = account.toDictionary() }
+            if let enableForecasting { payload["enableForecasting"] = enableForecasting }
             if let series { payload["series"] = series }
             if let timeframe { payload["timeframe"] = timeframe }
             if let duration { payload["duration"] = duration }
@@ -547,6 +573,16 @@ public enum BridgeCommand {
 
         case let .setSymbol(symbol):
             envelope = ["type": "setSymbol", "payload": ["symbol": symbol]]
+
+        case let .setInstrument(instrument):
+            var payload: [String: Any] = [:]
+            if let instrument { payload["instrument"] = instrument.toDictionary() }
+            envelope = ["type": "setInstrument", "payload": payload]
+
+        case let .setAccount(account):
+            var payload: [String: Any] = [:]
+            if let account { payload["account"] = account.toDictionary() }
+            envelope = ["type": "setAccount", "payload": payload]
 
         case let .addIndicator(name, params):
             var payload: [String: Any] = ["shortName": name]

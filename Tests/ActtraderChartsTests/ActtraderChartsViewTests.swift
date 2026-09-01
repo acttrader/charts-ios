@@ -68,7 +68,10 @@ final class BridgeCommandTests: XCTestCase {
             hideHeader: nil,
             initialCompares: nil,
             maxCompares: nil,
-            layoutSync: nil
+            layoutSync: nil,
+            instrument: nil,
+            account: nil,
+            enableForecasting: nil
         )
         let obj = try parseJSON(cmd.jsonString)
         XCTAssertEqual(obj["type"] as? String, "init")
@@ -106,7 +109,10 @@ final class BridgeCommandTests: XCTestCase {
             enableMultipleLayouts: nil, enableSnapshot: nil, hideHeader: nil,
             initialCompares: ["MSFT", "GOOG"],
             maxCompares: 4,
-            layoutSync: nil
+            layoutSync: nil,
+            instrument: nil,
+            account: nil,
+            enableForecasting: nil
         )
         let obj = try parseJSON(cmd.jsonString)
         let payload = try XCTUnwrap(obj["payload"] as? [String: Any])
