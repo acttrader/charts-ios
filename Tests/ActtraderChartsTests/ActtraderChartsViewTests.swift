@@ -71,7 +71,13 @@ final class BridgeCommandTests: XCTestCase {
             layoutSync: nil,
             instrument: nil,
             account: nil,
-            enableForecasting: nil
+            enableForecasting: nil,
+            enableCrossHairHeader: true,
+            crosshairEnabled: false,
+            orderLineTimeDrag: true,
+            orderLineDragSnap: nil,
+            orderLineAnchorPersistence: nil,
+            orderLineDefaultAnchor: "center"
         )
         let obj = try parseJSON(cmd.jsonString)
         XCTAssertEqual(obj["type"] as? String, "init")
@@ -79,6 +85,19 @@ final class BridgeCommandTests: XCTestCase {
         XCTAssertEqual(payload["theme"] as? String, "dark")
         XCTAssertEqual(payload["symbol"] as? String, "EURUSD")
         XCTAssertEqual(payload["series"] as? String, "candlestick")
+        // Header crosshair switch + horizontal order-line dragging reach the bridge by name.
+        XCTAssertEqual(payload["enableCrossHairHeader"] as? Bool, true)
+        XCTAssertEqual(payload["crosshairEnabled"] as? Bool, false)
+        XCTAssertEqual(payload["orderLineTimeDrag"] as? Bool, true)
+        XCTAssertNil(payload["orderLineDragSnap"])
+        XCTAssertEqual(payload["orderLineDefaultAnchor"] as? String, "center")
+    }
+
+    func testSetCrosshairEnabledCommandJSON() throws {
+        let obj = try parseJSON(BridgeCommand.setCrosshairEnabled(false).jsonString)
+        XCTAssertEqual(obj["type"] as? String, "setCrosshairEnabled")
+        let payload = try XCTUnwrap(obj["payload"] as? [String: Any])
+        XCTAssertEqual(payload["enabled"] as? Bool, false)
     }
 
     func testInitWithComparesIncludesInitialCompares() throws {
@@ -251,6 +270,39 @@ final class BridgeCommandTests: XCTestCase {
         XCTAssertEqual(volume, 1000)
         XCTAssertEqual(x, 100.5)
         XCTAssertEqual(y, 200.0)
+    }
+
+    func testParseCrosshairToggleEvent() {
+        let event = BridgeEvent.parse(#"{"type":"crosshairToggle","payload":{"enabled":false}}"#)
+        guard case let .crosshairToggle(enabled) = event else {
+            XCTFail("Expected .crosshairToggle, got \(String(describing: event))")
+            return
+        }
+        XCTAssertFalse(enabled)
+    }
+
+    func testParseOrderLineMovedEvent() {
+        let json = """
+        {
+          "type": "orderLineMoved",
+          "payload": {
+            "label": "ORD-1", "fromTimestamp": 1718000000000, "toTimestamp": 1718003600000,
+            "fromBarIndex": 40, "toBarIndex": 41, "data": {"id": "ORD-1"}, "isFullscreen": false
+          }
+        }
+        """
+        let event = BridgeEvent.parse(json)
+        guard case let .orderLineMoved(label, fromTs, toTs, fromIdx, toIdx, data, isFullscreen) = event else {
+            XCTFail("Expected .orderLineMoved, got \(String(describing: event))")
+            return
+        }
+        XCTAssertEqual(label, "ORD-1")
+        XCTAssertEqual(fromTs, 1_718_000_000_000)
+        XCTAssertEqual(toTs, 1_718_003_600_000)
+        XCTAssertEqual(fromIdx, 40)
+        XCTAssertEqual(toIdx, 41)
+        XCTAssertTrue(data.contains("\"id\":\"ORD-1\""))
+        XCTAssertFalse(isFullscreen)
     }
 
     func testParseViewportChangeEvent() {

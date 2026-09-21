@@ -181,6 +181,12 @@ ActtraderChartsView.prewarm()
 | `hideOHLCV` | `Bool?` | `nil` | Hide the OHLC(V) data strip (`O: H: L: C: V:`) in the top-left overlay. Independent of `hideSymbolAndTick` — set both to `true` to hide the entire overlay |
 | `showBottomBar` | `Bool?` | `nil` | Show the bottom duration-selector bar (hidden by default) |
 | `hideHeader` | `Bool?` | `nil` (`false`) | Hide the chart header entirely (whichever `headerLayout` variant would have rendered). Bottom bar, drawing tools, and on-canvas overlays remain on their own flags. Drive the chart from native UI via `setTimeframe(...)`, `setSeries(...)`, `addIndicatorByName(...)`, `removeIndicator(...)` |
+| `enableCrossHairHeader` | `Bool?` | `nil` (`false`) | Crosshair on/off switch in the chart header. The crosshair starts on, so the icon is tinted; tapping it hides the crosshair (and the floating trade button riding on it) and drops the icon to its plain state, the next tap brings both back. Fires `onCrosshairToggle` — see [Header crosshair switch](#header-crosshair-switch) |
+| `crosshairEnabled` | `Bool?` | `nil` (`true`) | Draw the crosshair at all. `false` hides it and the floating trade button until `setCrosshairEnabled(true)` — use it to restore a persisted `onCrosshairToggle` choice |
+| `orderLineTimeDrag` | `Bool?` | `nil` (`false`) | Horizontal (time-axis) order-line dragging for levels flagged `"timeDraggable": true` — open positions **and pending orders**. Broker-gated; see [Horizontal order-line dragging](#horizontal-time-axis-order-line-dragging) |
+| `orderLineDragSnap` | `Bool?` | `nil` (`true`) | Snap a horizontally dragged badge to the nearest candle on release |
+| `orderLineAnchorPersistence` | `Bool?` | `nil` (`true`) | Remember dropped badge positions in the WebView's `localStorage` (keyed by level label) across reloads |
+| `orderLineDefaultAnchor` | `String?` | `nil` (`"timestamp"`) | Where an un-dragged `timeDraggable` badge sits: `"timestamp"` (over the candle at the level's `timestamp`) or `"center"` (mid-chart) |
 | `timezone` | `String?` | `nil` (`"UTC"`) | IANA timezone string for time-axis and crosshair labels. `"UTC"` (default), `"local"` (device timezone), or any IANA string (`"America/New_York"`, `"Europe/London"`, etc.) |
 | `uiConfigJson` | `String?` | `nil` | Per-component UI configuration overrides (font sizes, icon sizes, spacing) as a raw JSON string. See *Mobile icon sizing* below. |
 | `themeOverrides` | `ThemeOverrides?` | `nil` | Typed per-theme color overrides. See *Theme overrides* below. |
@@ -352,6 +358,7 @@ chart.initialize(
 | `setLoading(_:)` | Show or hide the loading overlay |
 | `setTimezone(_:)` | Change display timezone at runtime — IANA string (`"America/New_York"`) or `"local"` |
 | `setLayoutSync(_:)` | Update the layout popover's cross-pane sync toggles (`LayoutSync`, partial). Only with `enableMultipleLayouts: true`. See [Multi-pane layouts](#multi-pane-layouts--snapshot) |
+| `setCrosshairEnabled(_:)` | Show or hide the crosshair at runtime, together with the floating trade button that rides on it. Same effect as tapping the header switch (`enableCrossHairHeader`); fires `onCrosshairToggle` when the state changes |
 | `setThemeOverrides(_:)` | Update per-theme color overrides at runtime — accepts typed `ThemeOverrides` or raw JSON string |
 | `correctBar(barTime:bar:)` | Replace a specific bar with authoritative OHLCV data (e.g. server correction) |
 | **Compare** | |
@@ -402,6 +409,10 @@ chart.loadData(bars)
 | `onDraftInitiated` | New draft order shown — payload includes `side`, `price`, `orderType`, `isFullscreen` |
 | `onDraftCancelled` | Draft order cancelled — payload includes `label`, `isFullscreen` |
 | `onTfcToggle` | TFC toggled on or off — payload includes `enabled: Bool` |
+| `onCrosshairToggle` | Crosshair switched on or off via the header switch (`enableCrossHairHeader`) or `setCrosshairEnabled(_:)` — `.crosshairToggle(enabled:)`. Persist it and seed `crosshairEnabled` on the next init |
+| `onOrderLineMoveStart` | Horizontal (time-axis) badge drag started (requires `orderLineTimeDrag`) — `.orderLineMoveStart(label:fromTimestamp:fromBarIndex:isFullscreen:)` |
+| `onOrderLineMoving` | Fires on every move of a horizontal badge drag — `.orderLineMoving(label:toTimestamp:toBarIndex:isFullscreen:)` |
+| `onOrderLineMoved` | Horizontal badge drag ended on another candle; the price is unchanged — `.orderLineMoved(label:fromTimestamp:toTimestamp:fromBarIndex:toBarIndex:data:isFullscreen:)` (`data` is the level's raw JSON) |
 | `onUiStateChange` | Any chart flyout/modal/dropdown opened or closed — payload includes `hasOpenUI: Bool`. Most hosts don't need this directly; `ActtraderChartsView.hasOpenUI` mirrors the state automatically and `dismissAllUI()` is the usual integration point. |
 | `onDataRequest` | Chart requests data for a time range — payload includes `requestId`, `from`, `to`, `timeframe`; call `resolveDataRequest` to respond |
 | `onSymbolClick` | User tapped the symbol name (requires `onSymbolClick: true` in `init`) |
@@ -621,6 +632,48 @@ In both cases the chart fires `onTradeLevelBracketActivated` with the computed p
 To remove a bracket without a price: use `removeBracket(bracketType: "sl")` (draft) or `removeBracket(bracketType: "sl", label: orderId)` (existing).
 
 **Estimated P&L on bracket lines:** Call `setDraftBracketPnl(bracketType: "sl", pnlText: "-$12.50")` to display a consumer-calculated P&L string next to the active bracket line on the chart. The text attaches to whichever level is the active bracket host — the draft order while drafting, or the currently selected existing pending order / position while modifying. Call `selectLevel(label: orderId)` (or have the user tap a level) before pushing the P&L text for an existing order. Pass `nil` as `pnlText` to clear.
+
+## Header crosshair switch
+
+Pass `enableCrossHairHeader: true` to the constructor to put a crosshair icon in the chart header. The chart crosshair is shown as usual on load and the icon is tinted. Tapping the icon hides the crosshair — and the floating "place order at this price" button that rides on it — and the icon drops to its plain state; tapping again brings both back.
+
+```swift
+let chart = ActtraderChartsView(
+    enableCrossHairHeader: true,
+    crosshairEnabled: UserDefaults.standard.object(forKey: "crosshair") as? Bool ?? true // restore the last choice
+)
+chart.onCrosshairToggle = { event in
+    if case let .crosshairToggle(enabled) = event {
+        UserDefaults.standard.set(enabled, forKey: "crosshair")
+    }
+}
+chart.setCrosshairEnabled(false) // same as tapping the icon while it is on
+```
+
+## Horizontal (time-axis) order-line dragging
+
+Off by default — pass `orderLineTimeDrag: true` only for the users who should have it (it is a per-broker feature). Any level passed to `setLevels` with `"timeDraggable": true` can then have its info-box badge dragged left/right to re-anchor it to a different candle; `"timestamp"` (unix ms) says which candle the badge starts over. **Open positions and pending orders both qualify.** A position's badge grabs horizontally at once. A pending order keeps its entry-price drag: the first movement of its badge decides — sideways moves the time anchor with the price locked, up/down moves the entry price exactly as before. A tap that never moves still opens the edit panel.
+
+```swift
+let chart = ActtraderChartsView(orderLineTimeDrag: true, orderLineDragSnap: true, orderLineDefaultAnchor: "center")
+
+chart.setLevels(
+    [[
+        "id": "ORD-1", "price": 1.21013, "side": "buy", "orderType": "limit",
+        "lots": 0.05, "timestamp": 1_718_000_000_000, "timeDraggable": true,
+    ]],
+    labelKey: "id", priceKey: "price", type: "pending"
+)
+
+chart.onOrderLineMoved = { event in
+    guard case let .orderLineMoved(label, _, toTimestamp, _, _, _, _) = event else { return }
+    // Price is unchanged — only the badge's time anchor moved. The chart already remembers
+    // the drop in localStorage (orderLineAnchorPersistence); store toTimestamp server-side
+    // and echo it as "timestamp" in the next setLevels if you persist anchors yourself.
+}
+```
+
+Sideways drags emit `onOrderLineMoveStart` / `onOrderLineMoving` / `onOrderLineMoved`; vertical price drags keep emitting `onTradeLevelDrag` / `onTradeLevelEdit`. `orderLineDragSnap` (default `true`) snaps the drop to the nearest candle, `orderLineAnchorPersistence` (default `true`) remembers it across reloads, and `orderLineDefaultAnchor: "center"` starts never-dragged badges mid-chart instead of over their `timestamp`.
 
 ## CI / CD
 
