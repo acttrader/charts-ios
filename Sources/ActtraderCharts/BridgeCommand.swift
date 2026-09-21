@@ -182,7 +182,36 @@ public enum BridgeCommand {
         /// in a new Forecasting group, freehand Brush & Highlighter, and the full
         /// Ruler readout. Drawings only — nothing reaches the broker. Position
         /// quantity/money need `account`; pips need `instrument`. Default: `false`.
-        enableForecasting: Bool?
+        enableForecasting: Bool?,
+        /// Puts a crosshair on/off switch in the chart header. The crosshair itself
+        /// starts on (see `crosshairEnabled`) so the icon is tinted; tapping it hides
+        /// the crosshair — and the floating trade button that rides on it — and drops
+        /// the icon to its plain state; tapping again brings both back. Each tap emits
+        /// a `crosshairToggle` event so the host can persist the choice. Default: `false`.
+        enableCrossHairHeader: Bool? = nil,
+        /// Whether the crosshair is drawn at all. `false` hides it and the floating trade
+        /// button, ignores mirrored crosshair positions and keeps the long-press crosshair
+        /// from arming. Seeds the header switch when `enableCrossHairHeader` is on; change
+        /// it later via ``ActtraderChartsView/setCrosshairEnabled(_:)``. Default: `true`.
+        crosshairEnabled: Bool? = nil,
+        /// Enables horizontal (time-axis) order-line dragging. A level passed to `setLevels`
+        /// with `"timeDraggable": true` — open positions and pending orders alike — can have
+        /// its info-box badge dragged left/right to re-anchor it to another candle; a
+        /// `"timestamp"` (unix ms) says which candle the badge starts over. Sideways drags
+        /// keep the price locked and end in an `orderLineMoved` event; a pending order's
+        /// badge still drags vertically to move its entry price — the first movement picks
+        /// the axis. Broker-gated: enable it only for the users who should have it.
+        /// Default: `false`.
+        orderLineTimeDrag: Bool? = nil,
+        /// Snap a horizontally dragged badge to the nearest candle on release. Default: `true`.
+        orderLineDragSnap: Bool? = nil,
+        /// Remember where each badge was dropped (WebView `localStorage`, keyed by level
+        /// label) so it comes back to the same candle after a reload. Default: `true`.
+        orderLineAnchorPersistence: Bool? = nil,
+        /// Where an un-dragged `timeDraggable` badge sits: `"timestamp"` (over the candle at
+        /// the level's `timestamp`) or `"center"` (mid-chart, so a fresh market order does
+        /// not land on the latest candle at the right edge). Default: `"timestamp"`.
+        orderLineDefaultAnchor: String? = nil
     )
 
     /// Replaces the full dataset.
@@ -220,6 +249,11 @@ public enum BridgeCommand {
     /// `nil` fields keep their current value. Only meaningful with
     /// `enableMultipleLayouts`.
     case setLayoutSync(LayoutSync)
+
+    /// Shows or hides the crosshair at runtime — together with the floating trade button
+    /// that rides on it. Same effect as tapping the header switch (`enableCrossHairHeader`);
+    /// the switch follows, and a `crosshairToggle` event fires when the state changes.
+    case setCrosshairEnabled(Bool)
 
     /// Changes the chart series type (e.g. `"candlestick"`, `"line"`, `"area"`).
     case setSeries(String)
@@ -448,7 +482,9 @@ public enum BridgeCommand {
                              uiConfigJson, durationTimeframeMap, onSymbolClick, onAskAiClick, timezone,
                              headerLayout, enableMultipleLayouts, enableSnapshot, hideHeader,
                              initialCompares, maxCompares, layoutSync, instrument, account,
-                             enableForecasting):
+                             enableForecasting, enableCrossHairHeader, crosshairEnabled,
+                             orderLineTimeDrag, orderLineDragSnap, orderLineAnchorPersistence,
+                             orderLineDefaultAnchor):
             var payload: [String: Any] = ["theme": theme]
             if let symbol { payload["symbol"] = symbol }
             if let instrument { payload["instrument"] = instrument.toDictionary() }
@@ -512,6 +548,12 @@ public enum BridgeCommand {
             if let initialCompares { payload["initialCompares"] = initialCompares }
             if let maxCompares { payload["maxCompares"] = maxCompares }
             if let layoutSync { payload["layoutSync"] = layoutSync.jsonObject }
+            if let enableCrossHairHeader { payload["enableCrossHairHeader"] = enableCrossHairHeader }
+            if let crosshairEnabled { payload["crosshairEnabled"] = crosshairEnabled }
+            if let orderLineTimeDrag { payload["orderLineTimeDrag"] = orderLineTimeDrag }
+            if let orderLineDragSnap { payload["orderLineDragSnap"] = orderLineDragSnap }
+            if let orderLineAnchorPersistence { payload["orderLineAnchorPersistence"] = orderLineAnchorPersistence }
+            if let orderLineDefaultAnchor { payload["orderLineDefaultAnchor"] = orderLineDefaultAnchor }
             func embedJson(_ key: String, _ json: String?) {
                 guard let json,
                       let data = json.data(using: .utf8),
@@ -554,6 +596,8 @@ public enum BridgeCommand {
 
         case let .setLayoutSync(sync):
             envelope = ["type": "setLayoutSync", "payload": sync.jsonObject]
+        case let .setCrosshairEnabled(enabled):
+            envelope = ["type": "setCrosshairEnabled", "payload": ["enabled": enabled]]
 
         case let .setSeries(series):
             envelope = ["type": "setSeries", "payload": ["series": series]]

@@ -216,6 +216,28 @@ public class ActtraderChartsView: UIView {
         /// meaningful with `enableMultipleLayouts`). Partial — `nil` fields use the
         /// library default. Change later via ``setLayoutSync(_:)``.
         layoutSync: LayoutSync? = nil,
+        /// Puts a crosshair on/off switch in the chart header. The crosshair starts on (see
+        /// `crosshairEnabled`) so the icon is tinted; tapping it hides the crosshair — and
+        /// the floating trade button that rides on it — and drops the icon to its plain
+        /// state; tapping again brings both back. Fires ``onCrosshairToggle``. Default: `false`.
+        enableCrossHairHeader: Bool? = nil,
+        /// Whether the crosshair is drawn at all. `false` hides it and the floating trade
+        /// button until ``setCrosshairEnabled(_:)`` turns it back on — use it to restore a
+        /// persisted ``onCrosshairToggle`` choice. Default: `true`.
+        crosshairEnabled: Bool? = nil,
+        /// Enables horizontal (time-axis) order-line dragging for levels flagged
+        /// `"timeDraggable": true` in `setLevels` — open positions and pending orders alike.
+        /// Sideways drags keep the price locked and fire ``onOrderLineMoved``; a pending
+        /// order's badge still drags vertically to move its entry price (the first movement
+        /// picks the axis). Broker-gated — enable only for the users who should have it.
+        /// Default: `false`.
+        orderLineTimeDrag: Bool? = nil,
+        /// Snap a horizontally dragged badge to the nearest candle on release. Default: `true`.
+        orderLineDragSnap: Bool? = nil,
+        /// Remember dropped badge positions in the WebView's `localStorage` across reloads. Default: `true`.
+        orderLineAnchorPersistence: Bool? = nil,
+        /// Where an un-dragged `timeDraggable` badge sits: `"timestamp"` (default) or `"center"`.
+        orderLineDefaultAnchor: String? = nil,
         initialState: String? = nil
     ) {
         // Build WKWebView configuration
@@ -330,7 +352,13 @@ public class ActtraderChartsView: UIView {
             layoutSync: layoutSync,
             instrument: instrument,
             account: account,
-            enableForecasting: enableForecasting
+            enableForecasting: enableForecasting,
+            enableCrossHairHeader: enableCrossHairHeader,
+            crosshairEnabled: crosshairEnabled,
+            orderLineTimeDrag: orderLineTimeDrag,
+            orderLineDragSnap: orderLineDragSnap,
+            orderLineAnchorPersistence: orderLineAnchorPersistence,
+            orderLineDefaultAnchor: orderLineDefaultAnchor
         ))
 
         // Queue state restoration alongside the init command so both are evaluated
@@ -431,6 +459,22 @@ public class ActtraderChartsView: UIView {
     /// Called when TFC (Trade from Charts) is toggled on or off via the top bar button or API.
     public var onTfcToggle: ((BridgeEvent) -> Void)?
 
+    /// Called when the crosshair is switched on or off — via the header switch
+    /// (`enableCrossHairHeader`) or ``setCrosshairEnabled(_:)``. Persist `enabled` and seed
+    /// it back through `crosshairEnabled` on the next init.
+    public var onCrosshairToggle: ((BridgeEvent) -> Void)?
+
+    /// Called when a horizontal (time-axis) badge drag starts (requires `orderLineTimeDrag`).
+    public var onOrderLineMoveStart: ((BridgeEvent) -> Void)?
+
+    /// Called on every move of a horizontal badge drag, before release.
+    public var onOrderLineMoving: ((BridgeEvent) -> Void)?
+
+    /// Called once when a horizontal badge drag ends on a different candle. The price is
+    /// unchanged — only the level's time anchor moved. Persist `toTimestamp` and echo it as
+    /// the level's `"timestamp"` in your next `setLevels` if you keep anchors server-side.
+    public var onOrderLineMoved: ((BridgeEvent) -> Void)?
+
     /// Called whenever a chart flyout/modal/dropdown opens or closes.
     /// Most hosts won't need this — ``hasOpenUI`` is maintained automatically and
     /// ``dismissAllUI()`` is the usual integration point.
@@ -517,6 +561,13 @@ public class ActtraderChartsView: UIView {
     /// passed at init. Use to restore a user's persisted sync preferences.
     public func setLayoutSync(_ sync: LayoutSync) {
         sendCommand(.setLayoutSync(sync))
+    }
+
+    /// Shows or hides the crosshair at runtime — and with it the floating trade button that
+    /// rides on it. Same effect as tapping the header switch (`enableCrossHairHeader`): the
+    /// switch follows, and ``onCrosshairToggle`` fires when the state changes.
+    public func setCrosshairEnabled(_ enabled: Bool) {
+        sendCommand(.setCrosshairEnabled(enabled))
     }
 
     /// Changes the chart series type.
@@ -1015,6 +1066,10 @@ public class ActtraderChartsView: UIView {
         case .draftInitiated:              onDraftInitiated?(event)
         case .draftCancelled:      onDraftCancelled?(event)
         case .tfcToggle:           onTfcToggle?(event)
+        case .crosshairToggle:     onCrosshairToggle?(event)
+        case .orderLineMoveStart:  onOrderLineMoveStart?(event)
+        case .orderLineMoving:     onOrderLineMoving?(event)
+        case .orderLineMoved:      onOrderLineMoved?(event)
         case let .uiStateChange(hasOpenUI):
             self.hasOpenUI = hasOpenUI
             onUiStateChange?(event)

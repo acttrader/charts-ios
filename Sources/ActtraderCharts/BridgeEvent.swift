@@ -105,6 +105,24 @@ public enum BridgeEvent {
     /// TFC (Trade from Charts) was toggled on or off via the top bar button or API.
     case tfcToggle(enabled: Bool)
 
+    /// The crosshair was switched on or off — via the header switch (`enableCrossHairHeader`)
+    /// or ``BridgeCommand/setCrosshairEnabled(_:)``. Persist `enabled` and seed it back
+    /// through `crosshairEnabled` on the next init.
+    case crosshairToggle(enabled: Bool)
+
+    /// A horizontal (time-axis) badge drag started — before any movement. Requires
+    /// `orderLineTimeDrag` and a level flagged `timeDraggable`. `fromTimestamp` is unix ms.
+    case orderLineMoveStart(label: String, fromTimestamp: Int64, fromBarIndex: Int, isFullscreen: Bool)
+
+    /// Live position during a horizontal badge drag — fires on every move, before release.
+    case orderLineMoving(label: String, toTimestamp: Int64, toBarIndex: Int, isFullscreen: Bool)
+
+    /// A horizontal badge drag ended on a different candle (after snapping, when enabled). The
+    /// price is unchanged — only the level's time anchor moved. `data` is the level's original
+    /// dictionary serialised as a raw JSON string.
+    case orderLineMoved(label: String, fromTimestamp: Int64, toTimestamp: Int64,
+                        fromBarIndex: Int, toBarIndex: Int, data: String, isFullscreen: Bool)
+
     /// Emitted whenever any dismissible chart UI (flyout, modal, dropdown, popover) opens or closes.
     /// Paired with ``BridgeCommand/dismissAllUI``, this lets the host decide whether the system
     /// back action should dismiss chart UI or propagate to normal navigation.
@@ -396,6 +414,38 @@ public enum BridgeEvent {
 
         case "tfcToggle":
             return .tfcToggle(enabled: p["enabled"] as? Bool ?? false)
+
+        case "crosshairToggle":
+            return .crosshairToggle(enabled: p["enabled"] as? Bool ?? false)
+
+        case "orderLineMoveStart":
+            return .orderLineMoveStart(
+                label:         p["label"] as? String ?? "",
+                fromTimestamp: (p["fromTimestamp"] as? Int64) ?? Int64(p["fromTimestamp"] as? Double ?? 0),
+                fromBarIndex:  (p["fromBarIndex"] as? Int) ?? Int(p["fromBarIndex"] as? Double ?? 0),
+                isFullscreen:  p["isFullscreen"] as? Bool ?? false
+            )
+
+        case "orderLineMoving":
+            return .orderLineMoving(
+                label:        p["label"] as? String ?? "",
+                toTimestamp:  (p["toTimestamp"] as? Int64) ?? Int64(p["toTimestamp"] as? Double ?? 0),
+                toBarIndex:   (p["toBarIndex"] as? Int) ?? Int(p["toBarIndex"] as? Double ?? 0),
+                isFullscreen: p["isFullscreen"] as? Bool ?? false
+            )
+
+        case "orderLineMoved":
+            let olmData = p["data"].flatMap { try? JSONSerialization.data(withJSONObject: $0) }
+                .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+            return .orderLineMoved(
+                label:         p["label"] as? String ?? "",
+                fromTimestamp: (p["fromTimestamp"] as? Int64) ?? Int64(p["fromTimestamp"] as? Double ?? 0),
+                toTimestamp:   (p["toTimestamp"] as? Int64) ?? Int64(p["toTimestamp"] as? Double ?? 0),
+                fromBarIndex:  (p["fromBarIndex"] as? Int) ?? Int(p["fromBarIndex"] as? Double ?? 0),
+                toBarIndex:    (p["toBarIndex"] as? Int) ?? Int(p["toBarIndex"] as? Double ?? 0),
+                data:          olmData,
+                isFullscreen:  p["isFullscreen"] as? Bool ?? false
+            )
 
         case "uiStateChange":
             return .uiStateChange(hasOpenUI: p["hasOpenUI"] as? Bool ?? false)
