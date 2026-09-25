@@ -201,6 +201,24 @@ final class BridgeCommandTests: XCTestCase {
         XCTAssertEqual(payload["T"] as? Int64, 1_700_000_000_000)
     }
 
+    func testSetCanvasColorsCommandJSON() throws {
+        let obj = try parseJSON(BridgeCommand.setCanvasColors(#"{"dark":{"background":"#ff00ff"}}"#).jsonString)
+        XCTAssertEqual(obj["type"] as? String, "setCanvasColors")
+        let payload = try XCTUnwrap(obj["payload"] as? [String: Any])
+        let colors = try XCTUnwrap(payload["colors"] as? [String: Any])
+        let dark = try XCTUnwrap(colors["dark"] as? [String: Any])
+        XCTAssertEqual(dark["background"] as? String, "#ff00ff")
+
+        let cleared = try parseJSON(BridgeCommand.setCanvasColors(nil).jsonString)
+        let clearedPayload = try XCTUnwrap(cleared["payload"] as? [String: Any])
+        XCTAssertTrue(clearedPayload["colors"] is NSNull)
+
+        let typed = CanvasColors(dark: CanvasColorPicks(background: "#ff00ff", grid: "#5a005a")).toJsonString()
+        let typedObj = try parseJSON(typed)
+        let typedDark = try XCTUnwrap(typedObj["dark"] as? [String: Any])
+        XCTAssertEqual(typedDark["grid"] as? String, "#5a005a")
+    }
+
     func testSetThemeCommandJSON() throws {
         let cmd = BridgeCommand.setTheme("light")
         let obj = try parseJSON(cmd.jsonString)

@@ -262,6 +262,19 @@ All properties at every level are optional — only supply the ones you want to 
 
 > Raw JSON strings are still supported via `themeOverridesJson` / `setThemeOverrides(jsonString)` for backward compatibility.
 
+#### Chart background: canvas only
+
+`setThemeOverrides(ThemeOverrides(dark: ChartThemeOverride(background: …)))` recolours the **whole chart** by design — the theme's `background` token also paints the header, the bottom bar, the drawing toolbar and every popover. For a background that must stay inside the plot, use the canvas picks instead: `canvasColorsJson` in the constructor, or `setCanvasColors(_:)` at runtime. They are the same picks the in-chart Chart Settings dialog writes, so they are scoped to the plot and its axes and persisted in the state snapshot.
+
+```swift
+// In the constructor
+let chart = ActtraderChartsView(canvasColorsJson: #"{"dark":{"background":"#ff00ff"},"light":{"background":"#ffffff"}}"#)
+
+// At runtime — typed or raw JSON; nil clears the picks
+chart.setCanvasColors(CanvasColors(dark: CanvasColorPicks(background: "#ff00ff", grid: "#5a005a")))
+chart.setCanvasColors(nil)
+```
+
 ### Fonts
 
 The chart renders inside a `WKWebView`. The symbol name, O/H/L/C strip, and toolbar text
@@ -367,7 +380,8 @@ chart.initialize(
 | `setTimezone(_:)` | Change display timezone at runtime — IANA string (`"America/New_York"`) or `"local"` |
 | `setLayoutSync(_:)` | Update the layout popover's cross-pane sync toggles (`LayoutSync`, partial). Only with `enableMultipleLayouts: true`. See [Multi-pane layouts](#multi-pane-layouts--snapshot) |
 | `setCrosshairEnabled(_:)` | Show or hide the crosshair at runtime, together with the floating trade button that rides on it. Same effect as tapping the header switch (`enableCrossHairHeader`); fires `onCrosshairToggle` when the state changes |
-| `setThemeOverrides(_:)` | Update per-theme color overrides at runtime — accepts typed `ThemeOverrides` or raw JSON string |
+| `setThemeOverrides(_:)` | Update per-theme color overrides at runtime — canvas **and** chrome — accepts typed `ThemeOverrides` or raw JSON string |
+| `setCanvasColors(_:)` | Recolour the **canvas only** at runtime (plot + axes; the header, bottom bar, drawing toolbar and popovers keep their theme) — typed `CanvasColors` or raw JSON string; `nil` clears. See [Chart background: canvas only](#chart-background-canvas-only) |
 | `correctBar(barTime:bar:)` | Replace a specific bar with authoritative OHLCV data (e.g. server correction) |
 | **Compare** | |
 | `addCompare(_:)` | Add a compare symbol overlay. Fires `onCompareDataRequest` — reply via `resolveCompareDataRequest` |
