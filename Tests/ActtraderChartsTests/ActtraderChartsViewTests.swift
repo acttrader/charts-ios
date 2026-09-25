@@ -77,7 +77,8 @@ final class BridgeCommandTests: XCTestCase {
             orderLineTimeDrag: true,
             orderLineDragSnap: nil,
             orderLineAnchorPersistence: nil,
-            orderLineDefaultAnchor: "center"
+            orderLineDefaultAnchor: "center",
+            revealNewBrackets: true
         )
         let obj = try parseJSON(cmd.jsonString)
         XCTAssertEqual(obj["type"] as? String, "init")
@@ -91,6 +92,7 @@ final class BridgeCommandTests: XCTestCase {
         XCTAssertEqual(payload["orderLineTimeDrag"] as? Bool, true)
         XCTAssertNil(payload["orderLineDragSnap"])
         XCTAssertEqual(payload["orderLineDefaultAnchor"] as? String, "center")
+        XCTAssertEqual(payload["revealNewBrackets"] as? Bool, true)
     }
 
     func testSetCrosshairEnabledCommandJSON() throws {

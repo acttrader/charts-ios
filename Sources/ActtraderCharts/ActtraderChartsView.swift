@@ -238,6 +238,10 @@ public class ActtraderChartsView: UIView {
         orderLineAnchorPersistence: Bool? = nil,
         /// Where an un-dragged `timeDraggable` badge sits: `"timestamp"` (default) or `"center"`.
         orderLineDefaultAnchor: String? = nil,
+        /// Widen the price axis when a level gains a new SL/TP that sits outside the
+        /// visible range, so the line placed from your order form comes into view.
+        /// Default: `false`.
+        revealNewBrackets: Bool? = nil,
         initialState: String? = nil
     ) {
         // Build WKWebView configuration
@@ -358,7 +362,8 @@ public class ActtraderChartsView: UIView {
             orderLineTimeDrag: orderLineTimeDrag,
             orderLineDragSnap: orderLineDragSnap,
             orderLineAnchorPersistence: orderLineAnchorPersistence,
-            orderLineDefaultAnchor: orderLineDefaultAnchor
+            orderLineDefaultAnchor: orderLineDefaultAnchor,
+            revealNewBrackets: revealNewBrackets
         ))
 
         // Queue state restoration alongside the init command so both are evaluated
