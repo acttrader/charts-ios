@@ -211,7 +211,12 @@ public enum BridgeCommand {
         /// Where an un-dragged `timeDraggable` badge sits: `"timestamp"` (over the candle at
         /// the level's `timestamp`) or `"center"` (mid-chart, so a fresh market order does
         /// not land on the latest candle at the right edge). Default: `"timestamp"`.
-        orderLineDefaultAnchor: String? = nil
+        orderLineDefaultAnchor: String? = nil,
+        /// When a level gains a new SL/TP (from `setLevels` or `updateLevelBracket`)
+        /// whose price sits outside the visible price range, widen the price axis so
+        /// the new line comes into view with the candles already on screen.
+        /// Default: `false`.
+        revealNewBrackets: Bool? = nil
     )
 
     /// Replaces the full dataset.
@@ -484,7 +489,7 @@ public enum BridgeCommand {
                              initialCompares, maxCompares, layoutSync, instrument, account,
                              enableForecasting, enableCrossHairHeader, crosshairEnabled,
                              orderLineTimeDrag, orderLineDragSnap, orderLineAnchorPersistence,
-                             orderLineDefaultAnchor):
+                             orderLineDefaultAnchor, revealNewBrackets):
             var payload: [String: Any] = ["theme": theme]
             if let symbol { payload["symbol"] = symbol }
             if let instrument { payload["instrument"] = instrument.toDictionary() }
@@ -554,6 +559,7 @@ public enum BridgeCommand {
             if let orderLineDragSnap { payload["orderLineDragSnap"] = orderLineDragSnap }
             if let orderLineAnchorPersistence { payload["orderLineAnchorPersistence"] = orderLineAnchorPersistence }
             if let orderLineDefaultAnchor { payload["orderLineDefaultAnchor"] = orderLineDefaultAnchor }
+            if let revealNewBrackets { payload["revealNewBrackets"] = revealNewBrackets }
             func embedJson(_ key: String, _ json: String?) {
                 guard let json,
                       let data = json.data(using: .utf8),
