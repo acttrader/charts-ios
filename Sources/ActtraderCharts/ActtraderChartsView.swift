@@ -943,6 +943,23 @@ public class ActtraderChartsView: UIView {
         sendCommand(.setThemeOverrides(overrides.toJsonString()))
     }
 
+    /// Recolours the **canvas only** at runtime: `background`, `grid`, `axisText`,
+    /// `axisBorder`, `crosshair` repaint the plot and its axes, while the chrome (header,
+    /// bottom bar, drawing toolbar, dialogs, popovers) keeps the theme from
+    /// ``setThemeOverrides(_:)-swift.method``. Use this — not a `themeOverrides` background,
+    /// which by design paints the whole chart — for a chart background that must stay inside
+    /// the plot. Same per-theme picks as the in-chart Chart Settings dialog; persisted in the
+    /// state snapshot.
+    /// - Parameter colorsJson: Raw JSON string, e.g. `{"dark":{"background":"#ff00ff"}}`; `nil` clears the picks.
+    public func setCanvasColors(_ colorsJson: String?) {
+        sendCommand(.setCanvasColors(colorsJson))
+    }
+
+    /// Recolours the canvas only using typed ``CanvasColors``.
+    public func setCanvasColors(_ colors: CanvasColors) {
+        sendCommand(.setCanvasColors(colors.toJsonString()))
+    }
+
     /// Replaces a specific bar with authoritative OHLCV data (e.g. a correction from the server).
     /// - Parameter barTime: Unix millisecond timestamp of the bar to replace.
     public func correctBar(barTime: Int64, bar: OHLCVBar) {

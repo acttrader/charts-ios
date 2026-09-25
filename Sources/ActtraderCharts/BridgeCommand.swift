@@ -429,6 +429,12 @@ public enum BridgeCommand {
     /// - Parameter overridesJson: Raw JSON string, e.g. `{"dark":{"background":"#111"}}`.
     case setThemeOverrides(String)
 
+    /// Recolours the **canvas only** at runtime — the plot and its axes — and leaves the
+    /// chrome (header, bottom bar, drawing toolbar, dialogs, popovers) on the theme from
+    /// ``setThemeOverrides(_:)``. Same per-theme picks as the in-chart Chart Settings dialog.
+    /// - Parameter colorsJson: Raw JSON string, e.g. `{"dark":{"background":"#ff00ff"}}`; `nil` clears the picks.
+    case setCanvasColors(String?)
+
     /// Replaces a specific bar with authoritative OHLCV data (e.g. a correction from the server).
     /// - Parameter barTime: Unix millisecond timestamp of the bar to replace.
     case correctBar(barTime: Int64, bar: OHLCVBar)
@@ -768,6 +774,15 @@ public enum BridgeCommand {
                 payload["overrides"] = parsed
             }
             envelope = ["type": "setThemeOverrides", "payload": payload]
+
+        case let .setCanvasColors(colorsJson):
+            var payload: [String: Any] = ["colors": NSNull()]
+            if let colorsJson,
+               let jsonData = colorsJson.data(using: .utf8),
+               let parsed = try? JSONSerialization.jsonObject(with: jsonData) {
+                payload["colors"] = parsed
+            }
+            envelope = ["type": "setCanvasColors", "payload": payload]
 
         case let .correctBar(barTime, bar):
             let barObj: [String: Any] = [

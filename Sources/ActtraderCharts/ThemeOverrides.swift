@@ -430,3 +430,86 @@ public struct TradePanelColors {
         return d
     }
 }
+
+// MARK: - Canvas-only colours
+
+/// Per-theme colour picks for the **canvas only** — what the in-chart Chart Settings
+/// dialog offers. Passed as `canvasColorsJson` at init or via
+/// ``ActtraderChartsView/setCanvasColors(_:)-swift.method`` at runtime. Unlike
+/// ``ThemeOverrides``, the surface picks (`background`, `grid`, `axisText`, `axisBorder`,
+/// `crosshair`) never reach the chrome — header, bottom bar, drawing toolbar, dialogs, popovers.
+///
+/// ```swift
+/// chart.setCanvasColors(CanvasColors(dark: CanvasColorPicks(background: "#ff00ff")))
+/// ```
+public struct CanvasColors {
+    public var dark: CanvasColorPicks?
+    public var light: CanvasColorPicks?
+
+    public init(dark: CanvasColorPicks? = nil, light: CanvasColorPicks? = nil) {
+        self.dark = dark
+        self.light = light
+    }
+
+    /// Serialises to the JSON string expected by the bridge.
+    func toJsonString() -> String {
+        var root: [String: Any] = [:]
+        if let dark { root["dark"] = dark.toDictionary() }
+        if let light { root["light"] = light.toDictionary() }
+        guard let data = try? JSONSerialization.data(withJSONObject: root),
+              let str = String(data: data, encoding: .utf8)
+        else { return "{}" }
+        return str
+    }
+}
+
+/// One theme mode's canvas picks. Every property is optional.
+public struct CanvasColorPicks {
+    public var background: String?
+    public var grid: String?
+    public var axisText: String?
+    public var axisBorder: String?
+    public var crosshair: String?
+    public var candleUp: String?
+    public var candleDown: String?
+    public var wickUp: String?
+    public var wickDown: String?
+    public var borderUp: String?
+    public var borderDown: String?
+    public var volumeUp: String?
+    public var volumeDown: String?
+
+    public init(
+        background: String? = nil, grid: String? = nil, axisText: String? = nil,
+        axisBorder: String? = nil, crosshair: String? = nil,
+        candleUp: String? = nil, candleDown: String? = nil,
+        wickUp: String? = nil, wickDown: String? = nil,
+        borderUp: String? = nil, borderDown: String? = nil,
+        volumeUp: String? = nil, volumeDown: String? = nil
+    ) {
+        self.background = background; self.grid = grid; self.axisText = axisText
+        self.axisBorder = axisBorder; self.crosshair = crosshair
+        self.candleUp = candleUp; self.candleDown = candleDown
+        self.wickUp = wickUp; self.wickDown = wickDown
+        self.borderUp = borderUp; self.borderDown = borderDown
+        self.volumeUp = volumeUp; self.volumeDown = volumeDown
+    }
+
+    func toDictionary() -> [String: Any] {
+        var d: [String: Any] = [:]
+        if let background { d["background"] = background }
+        if let grid { d["grid"] = grid }
+        if let axisText { d["axisText"] = axisText }
+        if let axisBorder { d["axisBorder"] = axisBorder }
+        if let crosshair { d["crosshair"] = crosshair }
+        if let candleUp { d["candleUp"] = candleUp }
+        if let candleDown { d["candleDown"] = candleDown }
+        if let wickUp { d["wickUp"] = wickUp }
+        if let wickDown { d["wickDown"] = wickDown }
+        if let borderUp { d["borderUp"] = borderUp }
+        if let borderDown { d["borderDown"] = borderDown }
+        if let volumeUp { d["volumeUp"] = volumeUp }
+        if let volumeDown { d["volumeDown"] = volumeDown }
+        return d
+    }
+}
