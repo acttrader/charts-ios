@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'ActtraderCharts'
-  s.version          = '1.3.0-beta.27'
+  s.version          = '1.3.0-beta.28'
   s.summary          = 'ActTrader financial charting library for iOS — WKWebView wrapper.'
   s.description      = <<-DESC
     ActtraderCharts embeds the ActTrader stock chart (canvas-based, zero native deps)
