@@ -31,6 +31,78 @@ public struct LayoutSync {
     }
 }
 
+/// The opt-in header features: indicator templates, chart-settings templates,
+/// saved layouts and Quick Search.
+///
+/// Grouped into one struct rather than nine more associated values on
+/// ``BridgeCommand/initialize(...)`` — they ship and roll back together, and a
+/// struct keeps the init call readable. Every field is optional; a `nil` field is
+/// omitted from the payload and the chart keeps its default, which is **off**.
+/// With the struct omitted entirely the chart renders exactly as it did before
+/// these features existed.
+///
+/// None of them persist anything. Each emits an event carrying the saved object
+/// and your app stores it — the same contract `stateChange` already follows.
+public struct HeaderFeatures {
+    /// Show the Templates block at the foot of the indicators flyout — named,
+    /// reusable indicator sets. No new header button.
+    public var enableIndicatorTemplates: Bool?
+    /// Indicator templates to list at init, as a JSON array string.
+    public var indicatorTemplatesJson: String?
+    /// Show the Templates row and the "Apply to all charts" switch in the Chart
+    /// Settings dialog.
+    public var enableSettingsTemplates: Bool?
+    /// Settings templates to list at init, as a JSON array string.
+    public var settingsTemplatesJson: String?
+    /// Show the Saved layouts section in the layout popover — a grid preset plus
+    /// every pane's full state. Requires `enableMultipleLayouts`.
+    public var enableSavedLayouts: Bool?
+    /// Saved layouts to list at init, as a JSON array string.
+    public var savedLayoutsJson: String?
+    /// Enable Quick Search, the command palette over everything the chart can do.
+    /// iOS has no Ctrl/⌘+K, so open it with
+    /// ``ActtraderChartsView/openQuickSearch()``.
+    public var enableQuickSearch: Bool?
+    /// Add a search button to the header for Quick Search. Default `false` — a new
+    /// button would change a header this feature otherwise leaves alone.
+    public var quickSearchShowButton: Bool?
+
+    public init(enableIndicatorTemplates: Bool? = nil, indicatorTemplatesJson: String? = nil,
+                enableSettingsTemplates: Bool? = nil, settingsTemplatesJson: String? = nil,
+                enableSavedLayouts: Bool? = nil, savedLayoutsJson: String? = nil,
+                enableQuickSearch: Bool? = nil, quickSearchShowButton: Bool? = nil) {
+        self.enableIndicatorTemplates = enableIndicatorTemplates
+        self.indicatorTemplatesJson = indicatorTemplatesJson
+        self.enableSettingsTemplates = enableSettingsTemplates
+        self.settingsTemplatesJson = settingsTemplatesJson
+        self.enableSavedLayouts = enableSavedLayouts
+        self.savedLayoutsJson = savedLayoutsJson
+        self.enableQuickSearch = enableQuickSearch
+        self.quickSearchShowButton = quickSearchShowButton
+    }
+
+    /// Merges these flags into an `init` payload. JSON-string fields are parsed;
+    /// a malformed one is dropped rather than throwing, so a corrupt stored
+    /// template can never stop the chart from starting.
+    func merge(into payload: inout [String: Any]) {
+        if let enableIndicatorTemplates { payload["enableIndicatorTemplates"] = enableIndicatorTemplates }
+        if let enableSettingsTemplates { payload["enableSettingsTemplates"] = enableSettingsTemplates }
+        if let enableSavedLayouts { payload["enableSavedLayouts"] = enableSavedLayouts }
+        if let enableQuickSearch { payload["enableQuickSearch"] = enableQuickSearch }
+        if let quickSearchShowButton { payload["quickSearch"] = ["showButton": quickSearchShowButton] }
+        func embedArray(_ key: String, _ json: String?) {
+            guard let json,
+                  let data = json.data(using: .utf8),
+                  let obj = try? JSONSerialization.jsonObject(with: data) as? [Any]
+            else { return }
+            payload[key] = obj
+        }
+        embedArray("indicatorTemplates", indicatorTemplatesJson)
+        embedArray("settingsTemplates", settingsTemplatesJson)
+        embedArray("savedLayouts", savedLayoutsJson)
+    }
+}
+
 /// Commands sent from native iOS code to the chart WebView.
 ///
 /// Each case serialises itself to the JSON format expected by
@@ -216,7 +288,68 @@ public enum BridgeCommand {
         /// whose price sits outside the visible price range, widen the price axis so
         /// the new line comes into view with the candles already on screen.
         /// Default: `false`.
-        revealNewBrackets: Bool? = nil
+        revealNewBrackets: Bool? = nil,
+        /// The opt-in header features — indicator templates, settings templates,
+        /// saved layouts and Quick Search. Omit for the chart's long-standing
+        /// behaviour; see ``HeaderFeatures``.
+        headerFeatures: HeaderFeatures? = nil,
+        /// Box/reversal parameters for the price-transform chart types (Renko,
+        /// Line Break, Kagi, Point & Figure) as a JSON object string — e.g.
+        /// `{"renko":{"boxSize":{"kind":"fixed","size":5}}}`.
+        ///
+        /// Omit for the default of **ATR(14)** on all of them, which is what you
+        /// want unless the instrument has a meaningful fixed tick: a box of "10"
+        /// is noise on an index and a lifetime on a forex pair.
+        seriesOptionsJson: String? = nil,
+        /// Initial pointer behaviour over the plot: `"cross"` (default), `"dot"`,
+        /// `"arrow"`, `"demonstration"` (a fading laser trail for screen-sharing)
+        /// or `"eraser"` (a tap deletes the drawing under it). Independent of the
+        /// drawing tool.
+        cursorMode: String? = nil,
+        /// Show an OHLCV readout beside a long press, on top of the crosshair it
+        /// already arms. The OHLC strip carries the same numbers but sits at the
+        /// far end of the screen from the finger. Default: `false`.
+        valueTooltip: Bool? = nil,
+        /// Add a **Cursors** group to the top of the drawing toolbar (Cross, Dot,
+        /// Arrow, Demonstration, Eraser). Default `false`, because it adds a
+        /// category to a toolbar apps have laid out around its current contents.
+        enableCursorModes: Bool? = nil,
+        /// Add an **Icons & Emojis** group to the drawing toolbar: a picker of
+        /// emojis, stickers and monochrome icons, placed as `icon` drawings and
+        /// resizable by dragging a corner. Default `false`, for the same reason
+        /// as `enableCursorModes`.
+        enableIconTools: Bool? = nil,
+        /// Add the **Status Line**, **Scales** and **Canvas** tabs to Chart
+        /// Settings, and the bar-colouring choice to Appearance. Default `false`.
+        enableChartSettings: Bool? = nil,
+        /// What the status line shows, as JSON, e.g. `{"barChange":true}`.
+        statusLineJson: String? = nil,
+        /// Price/time axis options, as JSON, e.g. `{"timezone":"Asia/Tokyo"}`.
+        scalesJson: String? = nil,
+        /// Grid, watermark and crosshair options, as JSON.
+        canvasJson: String? = nil,
+        /// `"open"` (default) or `"previousClose"` bar colouring.
+        barColorSource: String? = nil,
+        /// Add the bottom bar's Go-to-date / timezone / scale cluster. Needs
+        /// `showBottomBar`. Default `false`.
+        enableScaleControls: Bool? = nil,
+        /// `"normal"` (default), `"log"` or `"percent"` price axis.
+        priceScaleMode: String? = nil,
+        /// Whether the Y range refits to the visible bars. Default `true`.
+        autoScale: Bool? = nil,
+        /// Add the right-hand Data Window / Objects panel. It takes 232px out
+        /// of the plot, so it is off by default.
+        enableSidePanels: Bool? = nil,
+        /// Snap drawing points to the nearest OHLC of the bar under the cursor.
+        /// Default: `false`.
+        magnetMode: Bool? = nil,
+        /// Keep the drawing tool armed after each completed drawing, so a series
+        /// can be placed without returning to the toolbar. Default: `false`.
+        keepDrawingMode: Bool? = nil,
+        /// Announce every new drawing via `.drawingCreated` with `copyToAll`, so
+        /// your app can replicate it across the other panes of a layout — the
+        /// chart cannot, since only you know which panes exist. Default: `false`.
+        copyDrawingsToAllCharts: Bool? = nil
     )
 
     /// Replaces the full dataset.
@@ -297,6 +430,62 @@ public enum BridgeCommand {
 
     /// Removes all drawings from the chart.
     case clearAllDrawings
+
+    /// Chooses what the status line shows, as JSON, e.g. `{"barChange":true}`.
+    /// Merges — fields left out keep whatever they are.
+    case setStatusLineSettings(statusLineJson: String)
+
+    /// Price- and time-axis options, as JSON, e.g.
+    /// `{"highLowLabels":true,"pricePrecision":4,"timezone":"Asia/Tokyo"}`. Merges.
+    case setScalesSettings(scalesJson: String)
+
+    /// Grid, watermark and crosshair options, as JSON. Colours stay in
+    /// `setCanvasColors`. Merges.
+    case setCanvasOptions(canvasJson: String)
+
+    /// Whether a bar is "up" against its own open (`"open"`, the default) or
+    /// the previous bar's close (`"previousClose"`).
+    case setBarColorSource(source: String)
+
+    /// Decimal places for every price the chart writes; `nil` infers them from
+    /// the feed again. Display only — it does not change pip size.
+    case setPricePrecision(digits: Int?)
+
+    /// Switches the price axis: `"normal"`, `"log"` or `"percent"`. Log maps
+    /// equal ratios to equal height; it is unavailable on data that reaches
+    /// zero or below and maps linearly there rather than refusing to draw.
+    case setPriceScaleMode(mode: String)
+
+    /// Turns automatic Y-range fitting on or off. Switching it off freezes
+    /// what is on screen, so the chart does not jump as it stops moving.
+    case setAutoScale(enabled: Bool)
+
+    /// Scrolls to a date, centring the nearest bar. ISO 8601 or unix ms.
+    /// Nearest, not exact: the date asked for is often a weekend or a holiday.
+    case goToDate(date: String)
+
+    /// Shows or hides the docked Data Window / Objects panel.
+    case setSidePanelVisible(visible: Bool)
+
+    /// Switches the panel. `tab` is `"data"` or `"objects"`.
+    case setSidePanelTab(tab: String)
+
+    /// Shows or hides one drawing. Hiding the selected one deselects it.
+    case setDrawingVisible(id: String, visible: Bool)
+
+    /// Locks or unlocks one drawing. Locking the selected one deselects it.
+    case setDrawingLocked(id: String, locked: Bool)
+
+    /// Deletes one drawing by id, whether or not it is selected.
+    case deleteDrawing(id: String)
+
+    /// Selects a drawing by id. `nil` clears the selection.
+    case selectDrawing(id: String?)
+
+    /// Appends one drawing, leaving the existing ones alone — the receiving end
+    /// of copy-to-all-charts. Pass the `drawingJson` from a `drawingCreated`
+    /// event to every other chart view; each copy gets its own id.
+    case addDrawing(drawingJson: String)
 
     // ── State ─────────────────────────────────────────────────────────────────
 
@@ -470,6 +659,116 @@ public enum BridgeCommand {
     /// Resolves a pending `compareDataRequest` with fetched bars.
     case resolveCompareDataRequest(requestId: String, bars: [OHLCVBar])
 
+    // ── Snapshot ──────────────────────────────────────────────────────────────
+
+    /// Captures the chart without the user opening the snapshot popover.
+    ///
+    /// Replies with a `snapshot` event carrying a PNG `data:` URL — decode it and
+    /// hand it to `UIActivityViewController`, Photos or `UIPasteboard`; the
+    /// in-WebView browser download does nothing on iOS. Requires `enableSnapshot`.
+    ///
+    /// - Parameter action: `"download"` or `"copy"`, echoed back on the event so one
+    ///   handler can tell a share from a copy.
+    case requestSnapshot(action: String)
+
+    // ── Indicator templates ───────────────────────────────────────────────────
+
+    /// Replaces the templates listed in the indicators flyout.
+    /// - Parameter templatesJson: A JSON array of templates your app stored.
+    case setIndicatorTemplates(templatesJson: String)
+
+    /// Saves the chart's current indicators; replies with `indicatorTemplateSaved`.
+    case captureIndicatorTemplate(name: String)
+
+    /// Replaces the chart's indicators with a template's. Accepts the id or the name.
+    case applyIndicatorTemplate(id: String)
+
+    /// Removes a template from the flyout. Delete it from your storage too.
+    case deleteIndicatorTemplate(id: String)
+
+    // ── Chart-settings templates ──────────────────────────────────────────────
+
+    /// Replaces the templates listed in the Chart Settings dialog.
+    case setSettingsTemplates(templatesJson: String)
+
+    /// Saves the chart's current settings; replies with `settingsTemplateSaved`.
+    case captureSettingsTemplate(name: String)
+
+    /// Applies a saved settings template. Accepts the id or the name.
+    case applySettingsTemplate(id: String)
+
+    /// Removes a settings template. Delete it from your storage too.
+    case deleteSettingsTemplate(id: String)
+
+    /// Applies a settings snapshot to this chart — the "Apply to all charts"
+    /// fan-out, sent once per other pane.
+    /// - Parameter settingsJson: The `settings` object from `chartSettingsApplied`.
+    case applyChartSettings(settingsJson: String)
+
+    // ── Saved layouts ─────────────────────────────────────────────────────────
+
+    /// Replaces the layouts listed in the layout popover.
+    case setSavedLayouts(layoutsJson: String)
+
+    /// Saves the current preset and this chart's state; replies with `layoutSaved`.
+    /// - Parameter paneId: Identifies this chart within the layout. `"main"` for a
+    ///   single-chart screen; a distinct id per pane in a grid.
+    case captureSavedLayout(name: String, paneId: String)
+
+    /// Restores a saved layout into this chart. Accepts the id or the name.
+    case applySavedLayout(id: String, paneId: String)
+
+    /// Removes a saved layout. Delete it from your storage too.
+    case deleteSavedLayout(id: String)
+
+    /// Selects a grid preset. Emits `layoutChange`; mounting the panes stays your
+    /// app's job — the chart owns only the picker.
+    case setLayoutPreset(presetId: String)
+
+    // ── Quick Search ──────────────────────────────────────────────────────────
+
+    /// Opens the command palette. The entry point on iOS, which has no Ctrl/⌘+K —
+    /// wire it to a toolbar item. Requires `enableQuickSearch`.
+    case openQuickSearch
+
+    /// Closes the command palette.
+    case closeQuickSearch
+
+    // ── Chart types ───────────────────────────────────────────────────────────
+
+    /// Retunes the price-transform chart types — Renko, Line Break, Kagi and
+    /// Point & Figure.
+    ///
+    /// Merged over the current options, so one series can be retuned without
+    /// disturbing the others. The chart *type* is still chosen with
+    /// ``BridgeCommand/setSeries(_:)``: `"hlc"`, `"renko"`, `"linebreak"`,
+    /// `"kagi"` and `"pointfigure"` are new values of the same series string.
+    case setSeriesOptions(optionsJson: String)
+
+    // ── Cursors ───────────────────────────────────────────────────────────────
+
+    /// Switches pointer behaviour over the plot.
+    ///
+    /// Independent of the drawing tool — switching mode never cancels a drawing in
+    /// progress. Replies with `.cursorModeChange`.
+    ///
+    /// - Parameter mode: `"cross"`, `"dot"`, `"arrow"`, `"demonstration"` or `"eraser"`.
+    case setCursorMode(mode: String)
+
+    // ── Drawing toolbar options ───────────────────────────────────────────────
+
+    /// Snaps drawing points to the nearest OHLC of the bar under the cursor.
+    case setMagnetMode(enabled: Bool)
+
+    /// Keeps the active tool armed after each drawing, for placing a series.
+    case setKeepDrawingMode(enabled: Bool)
+
+    /// Announces new drawings via `.drawingCreated` for layout-wide replication.
+    case setCopyDrawingsToAllCharts(enabled: Bool)
+
+    /// Shows or hides the drawing toolbar at runtime.
+    case setDrawingToolbarVisible(visible: Bool)
+
     // ── Serialisation ─────────────────────────────────────────────────────────
 
     /// The JSON string to pass to `window.ChartBridge.send(...)`.
@@ -499,7 +798,12 @@ public enum BridgeCommand {
                              initialCompares, maxCompares, layoutSync, instrument, account,
                              enableForecasting, enableCrossHairHeader, crosshairEnabled,
                              orderLineTimeDrag, orderLineDragSnap, orderLineAnchorPersistence,
-                             orderLineDefaultAnchor, revealNewBrackets):
+                             orderLineDefaultAnchor, revealNewBrackets, headerFeatures,
+                             seriesOptionsJson, cursorMode, valueTooltip, enableCursorModes,
+                             enableIconTools, enableChartSettings, statusLineJson,
+                             scalesJson, canvasJson, barColorSource,
+                             enableScaleControls, priceScaleMode, autoScale, enableSidePanels,
+                             magnetMode, keepDrawingMode, copyDrawingsToAllCharts):
             var payload: [String: Any] = ["theme": theme]
             if let symbol { payload["symbol"] = symbol }
             if let instrument { payload["instrument"] = instrument.toDictionary() }
@@ -570,6 +874,25 @@ public enum BridgeCommand {
             if let orderLineAnchorPersistence { payload["orderLineAnchorPersistence"] = orderLineAnchorPersistence }
             if let orderLineDefaultAnchor { payload["orderLineDefaultAnchor"] = orderLineDefaultAnchor }
             if let revealNewBrackets { payload["revealNewBrackets"] = revealNewBrackets }
+            headerFeatures?.merge(into: &payload)
+            if let seriesOptionsJson,
+               let data = seriesOptionsJson.data(using: .utf8),
+               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                payload["seriesOptions"] = obj
+            }
+            if let cursorMode { payload["cursorMode"] = cursorMode }
+            if let valueTooltip { payload["valueTooltip"] = valueTooltip }
+            if let enableCursorModes { payload["enableCursorModes"] = enableCursorModes }
+            if let enableIconTools { payload["enableIconTools"] = enableIconTools }
+            if let enableChartSettings { payload["enableChartSettings"] = enableChartSettings }
+            if let barColorSource { payload["barColorSource"] = barColorSource }
+            if let enableScaleControls { payload["enableScaleControls"] = enableScaleControls }
+            if let priceScaleMode { payload["priceScaleMode"] = priceScaleMode }
+            if let autoScale { payload["autoScale"] = autoScale }
+            if let enableSidePanels { payload["enableSidePanels"] = enableSidePanels }
+            if let magnetMode { payload["magnetMode"] = magnetMode }
+            if let keepDrawingMode { payload["keepDrawingMode"] = keepDrawingMode }
+            if let copyDrawingsToAllCharts { payload["copyDrawingsToAllCharts"] = copyDrawingsToAllCharts }
             func embedJson(_ key: String, _ json: String?) {
                 guard let json,
                       let data = json.data(using: .utf8),
@@ -581,6 +904,9 @@ public enum BridgeCommand {
             embedJson("themeOverrides", themeOverridesJson)
             embedJson("labels", labelsJson)
             embedJson("uiConfig", uiConfigJson)
+            embedJson("statusLine", statusLineJson)
+            embedJson("scales", scalesJson)
+            embedJson("canvas", canvasJson)
             envelope = ["type": "init", "payload": payload]
 
         case let .loadData(bars, fitAll):
@@ -658,6 +984,72 @@ public enum BridgeCommand {
 
         case .clearAllDrawings:
             envelope = ["type": "clearAllDrawings", "payload": [:]]
+
+        case let .setStatusLineSettings(json):
+            guard
+                let data = json.data(using: .utf8),
+                let obj = try? JSONSerialization.jsonObject(with: data)
+            else { return "{}" }
+            envelope = ["type": "setStatusLineSettings", "payload": ["statusLine": obj]]
+
+        case let .setScalesSettings(json):
+            guard
+                let data = json.data(using: .utf8),
+                let obj = try? JSONSerialization.jsonObject(with: data)
+            else { return "{}" }
+            envelope = ["type": "setScalesSettings", "payload": ["scales": obj]]
+
+        case let .setCanvasOptions(json):
+            guard
+                let data = json.data(using: .utf8),
+                let obj = try? JSONSerialization.jsonObject(with: data)
+            else { return "{}" }
+            envelope = ["type": "setCanvasOptions", "payload": ["canvas": obj]]
+
+        case let .setBarColorSource(source):
+            envelope = ["type": "setBarColorSource", "payload": ["source": source]]
+
+        case let .setPriceScaleMode(mode):
+            envelope = ["type": "setPriceScaleMode", "payload": ["mode": mode]]
+
+        case let .setAutoScale(enabled):
+            envelope = ["type": "setAutoScale", "payload": ["enabled": enabled]]
+
+        case let .goToDate(date):
+            envelope = ["type": "goToDate", "payload": ["date": date]]
+
+        case let .setSidePanelVisible(visible):
+            envelope = ["type": "setSidePanelVisible", "payload": ["visible": visible]]
+
+        case let .setSidePanelTab(tab):
+            envelope = ["type": "setSidePanelTab", "payload": ["tab": tab]]
+
+        case let .setDrawingVisible(id, visible):
+            envelope = ["type": "setDrawingVisible", "payload": ["id": id, "visible": visible]]
+
+        case let .setDrawingLocked(id, locked):
+            envelope = ["type": "setDrawingLocked", "payload": ["id": id, "locked": locked]]
+
+        case let .deleteDrawing(id):
+            envelope = ["type": "deleteDrawing", "payload": ["id": id]]
+
+        case let .selectDrawing(id):
+            // NSNull, not omission: null means "clear the selection", where an
+            // absent key would read as "leave it alone".
+            envelope = ["type": "selectDrawing", "payload": ["id": id as Any? ?? NSNull()]]
+
+        case let .setPricePrecision(digits):
+            // NSNull, not omission: null means "go back to inferring it", and
+            // an absent key would read as "leave it alone".
+            envelope = ["type": "setPricePrecision",
+                        "payload": ["digits": digits as Any? ?? NSNull()]]
+
+        case let .addDrawing(drawingJson):
+            guard
+                let data = drawingJson.data(using: .utf8),
+                let drawing = try? JSONSerialization.jsonObject(with: data)
+            else { return "{}" }
+            envelope = ["type": "addDrawing", "payload": ["drawing": drawing]]
 
         case .getState:
             envelope = ["type": "getState", "payload": [:]]
@@ -824,6 +1216,87 @@ public enum BridgeCommand {
             }
             envelope = ["type": "resolveCompareDataRequest",
                         "payload": ["requestId": requestId, "bars": barsArray]]
+
+        case let .requestSnapshot(action):
+            envelope = ["type": "requestSnapshot", "payload": ["action": action]]
+
+        case let .setIndicatorTemplates(templatesJson):
+            envelope = ["type": "setIndicatorTemplates",
+                        "payload": ["templates": Self.jsonArray(templatesJson)]]
+
+        case let .captureIndicatorTemplate(name):
+            envelope = ["type": "captureIndicatorTemplate", "payload": ["name": name]]
+
+        case let .applyIndicatorTemplate(id):
+            envelope = ["type": "applyIndicatorTemplate", "payload": ["id": id]]
+
+        case let .deleteIndicatorTemplate(id):
+            envelope = ["type": "deleteIndicatorTemplate", "payload": ["id": id]]
+
+        case let .setSettingsTemplates(templatesJson):
+            envelope = ["type": "setSettingsTemplates",
+                        "payload": ["templates": Self.jsonArray(templatesJson)]]
+
+        case let .captureSettingsTemplate(name):
+            envelope = ["type": "captureSettingsTemplate", "payload": ["name": name]]
+
+        case let .applySettingsTemplate(id):
+            envelope = ["type": "applySettingsTemplate", "payload": ["id": id]]
+
+        case let .deleteSettingsTemplate(id):
+            envelope = ["type": "deleteSettingsTemplate", "payload": ["id": id]]
+
+        case let .applyChartSettings(settingsJson):
+            guard
+                let data = settingsJson.data(using: .utf8),
+                let obj = try? JSONSerialization.jsonObject(with: data)
+            else { return "{}" }
+            envelope = ["type": "applyChartSettings", "payload": ["settings": obj]]
+
+        case let .setSavedLayouts(layoutsJson):
+            envelope = ["type": "setSavedLayouts",
+                        "payload": ["layouts": Self.jsonArray(layoutsJson)]]
+
+        case let .captureSavedLayout(name, paneId):
+            envelope = ["type": "captureSavedLayout",
+                        "payload": ["name": name, "paneId": paneId]]
+
+        case let .applySavedLayout(id, paneId):
+            envelope = ["type": "applySavedLayout", "payload": ["id": id, "paneId": paneId]]
+
+        case let .deleteSavedLayout(id):
+            envelope = ["type": "deleteSavedLayout", "payload": ["id": id]]
+
+        case let .setLayoutPreset(presetId):
+            envelope = ["type": "setLayoutPreset", "payload": ["presetId": presetId]]
+
+        case .openQuickSearch:
+            envelope = ["type": "openQuickSearch", "payload": [:]]
+
+        case .closeQuickSearch:
+            envelope = ["type": "closeQuickSearch", "payload": [:]]
+
+        case let .setSeriesOptions(optionsJson):
+            guard
+                let data = optionsJson.data(using: .utf8),
+                let obj = try? JSONSerialization.jsonObject(with: data)
+            else { return "{}" }
+            envelope = ["type": "setSeriesOptions", "payload": ["options": obj]]
+
+        case let .setCursorMode(mode):
+            envelope = ["type": "setCursorMode", "payload": ["mode": mode]]
+
+        case let .setMagnetMode(enabled):
+            envelope = ["type": "setMagnetMode", "payload": ["enabled": enabled]]
+
+        case let .setKeepDrawingMode(enabled):
+            envelope = ["type": "setKeepDrawingMode", "payload": ["enabled": enabled]]
+
+        case let .setCopyDrawingsToAllCharts(enabled):
+            envelope = ["type": "setCopyDrawingsToAllCharts", "payload": ["enabled": enabled]]
+
+        case let .setDrawingToolbarVisible(visible):
+            envelope = ["type": "setDrawingToolbarVisible", "payload": ["visible": visible]]
         }
 
         guard
@@ -831,5 +1304,20 @@ public enum BridgeCommand {
             let json = String(data: data, encoding: .utf8)
         else { return "{}" }
         return json
+    }
+
+    /// Parses a JSON array string, yielding an empty array when it is malformed.
+    ///
+    /// Template and layout lists cross the bridge as opaque JSON — the native side
+    /// stores what the chart handed it and sends it back verbatim, so neither
+    /// Kotlin nor Swift has to mirror a type that only the chart interprets.
+    /// A corrupt stored list must degrade to "no saved items", never to a dropped
+    /// command or a crash.
+    private static func jsonArray(_ json: String) -> [Any] {
+        guard
+            let data = json.data(using: .utf8),
+            let obj = try? JSONSerialization.jsonObject(with: data) as? [Any]
+        else { return [] }
+        return obj
     }
 }
