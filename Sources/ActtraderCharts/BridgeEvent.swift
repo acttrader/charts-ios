@@ -188,24 +188,7 @@ public enum BridgeEvent {
     /// A study instance was removed (pill ×, settings dialog, or removeIndicator).
     case indicatorRemoved(instanceId: String, shortName: String)
 
-    /// An error occurred inside the chart engine.
-    // ── Snapshot ──────────────────────────────────────────────────────────────
-
-    /// The chart was captured — by the user picking Download/Copy, or by
-    /// ``BridgeCommand/requestSnapshot(action:)``.
-    ///
-    /// - Parameters:
-    ///   - dataUrl: A PNG `data:` URL. Strip the `data:image/png;base64,` prefix and
-    ///     `Data(base64Encoded:)` the rest, then share or save it — the in-WebView
-    ///     browser download does nothing on iOS.
-    ///   - action: `"download"` or `"copy"` — which one the user asked for.
-    case snapshot(dataUrl: String, action: String)
-
-    // ── Layouts ───────────────────────────────────────────────────────────────
-
-    /// The user picked a grid preset or toggled a sync switch. Mount or tear down
-    /// panes to match — the chart owns only the picker.
-    case layoutChange(presetId: String, paneCount: Int, sync: [String: Any])
+    // ── Layouts ──────────────────────────────────────────────────────────────
 
     /// A workspace was saved as a named layout. **Persist `layoutJson`** — the chart
     /// holds it only for the lifetime of the view.
@@ -306,6 +289,7 @@ public enum BridgeEvent {
     /// The side panel was shown or hidden. `tab` is `"data"` or `"objects"`.
     case sidePanelVisibility(visible: Bool, tab: String)
 
+    /// An error occurred inside the chart engine.
     case error(message: String, code: String?)
 
     // ── Parser ────────────────────────────────────────────────────────────────
@@ -553,16 +537,16 @@ public enum BridgeEvent {
         case "orderLineMoveStart":
             return .orderLineMoveStart(
                 label:         p["label"] as? String ?? "",
-                fromTimestamp: (p["fromTimestamp"] as? Int64) ?? Int64(p["fromTimestamp"] as? Double ?? 0),
-                fromBarIndex:  (p["fromBarIndex"] as? Int) ?? Int(p["fromBarIndex"] as? Double ?? 0),
+                fromTimestamp: Self.int64(p["fromTimestamp"]),
+                fromBarIndex:  Self.int(p["fromBarIndex"]),
                 isFullscreen:  p["isFullscreen"] as? Bool ?? false
             )
 
         case "orderLineMoving":
             return .orderLineMoving(
                 label:        p["label"] as? String ?? "",
-                toTimestamp:  (p["toTimestamp"] as? Int64) ?? Int64(p["toTimestamp"] as? Double ?? 0),
-                toBarIndex:   (p["toBarIndex"] as? Int) ?? Int(p["toBarIndex"] as? Double ?? 0),
+                toTimestamp:  Self.int64(p["toTimestamp"]),
+                toBarIndex:   Self.int(p["toBarIndex"]),
                 isFullscreen: p["isFullscreen"] as? Bool ?? false
             )
 
@@ -571,10 +555,10 @@ public enum BridgeEvent {
                 .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
             return .orderLineMoved(
                 label:         p["label"] as? String ?? "",
-                fromTimestamp: (p["fromTimestamp"] as? Int64) ?? Int64(p["fromTimestamp"] as? Double ?? 0),
-                toTimestamp:   (p["toTimestamp"] as? Int64) ?? Int64(p["toTimestamp"] as? Double ?? 0),
-                fromBarIndex:  (p["fromBarIndex"] as? Int) ?? Int(p["fromBarIndex"] as? Double ?? 0),
-                toBarIndex:    (p["toBarIndex"] as? Int) ?? Int(p["toBarIndex"] as? Double ?? 0),
+                fromTimestamp: Self.int64(p["fromTimestamp"]),
+                toTimestamp:   Self.int64(p["toTimestamp"]),
+                fromBarIndex:  Self.int(p["fromBarIndex"]),
+                toBarIndex:    Self.int(p["toBarIndex"]),
                 data:          olmData,
                 isFullscreen:  p["isFullscreen"] as? Bool ?? false
             )
@@ -646,17 +630,6 @@ public enum BridgeEvent {
                 let shortName  = p["shortName"]  as? String
             else { return nil }
             return .indicatorRemoved(instanceId: instanceId, shortName: shortName)
-
-        case "snapshot":
-            guard let dataUrl = p["dataUrl"] as? String else { return nil }
-            return .snapshot(dataUrl: dataUrl, action: p["action"] as? String ?? "download")
-
-        case "layoutChange":
-            guard let presetId = p["presetId"] as? String else { return nil }
-            let preset = p["preset"] as? [String: Any] ?? [:]
-            return .layoutChange(presetId: presetId,
-                                 paneCount: preset["count"] as? Int ?? 0,
-                                 sync: p["sync"] as? [String: Any] ?? [:])
 
         case "layoutSaved":
             guard
@@ -816,6 +789,23 @@ public enum BridgeEvent {
     /// Templates and layouts cross the bridge opaquely: the app stores the string
     /// the chart handed it and sends the same string back, so Swift never has to
     /// mirror a `ChartState` that only the chart interprets.
+    /// A JSON number as `Int64`. JavaScriptCore hands numbers over as `Int` or
+    /// `Double` depending on the value, so accept either. Kept out of line: the
+    /// inline `as? Int64 ?? Int64(as? Double ?? 0)` form, repeated several times
+    /// in one call, is more than the type checker will solve in reasonable time.
+    private static func int64(_ value: Any?) -> Int64 {
+        if let v = value as? Int64 { return v }
+        if let v = value as? Double { return Int64(v) }
+        return 0
+    }
+
+    /// A JSON number as `Int` — see ``int64(_:)``.
+    private static func int(_ value: Any?) -> Int {
+        if let v = value as? Int { return v }
+        if let v = value as? Double { return Int(v) }
+        return 0
+    }
+
     private static func jsonString(_ object: [String: Any]) -> String? {
         guard
             let data = try? JSONSerialization.data(withJSONObject: object),
