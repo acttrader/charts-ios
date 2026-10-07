@@ -325,6 +325,22 @@ final class BridgeCommandTests: XCTestCase {
         XCTAssertFalse(isFullscreen)
     }
 
+    func testGetCatalogCommandJSON() throws {
+        let obj = try parseJSON(BridgeCommand.getCatalog.jsonString)
+        XCTAssertEqual(obj["type"] as? String, "getCatalog")
+    }
+
+    func testParseCatalogEvent() throws {
+        let json = #"{"type":"catalog","payload":{"catalogVersion":"1.3.0-beta.26","timeframes":[{"id":"1m","label":"1m","available":true,"isShow":true}]}}"#
+        guard case let .catalog(version, catalogJson) = BridgeEvent.parse(json) else {
+            return XCTFail("Expected .catalog")
+        }
+        XCTAssertEqual(version, "1.3.0-beta.26")
+        let obj = try parseJSON(catalogJson)
+        let tfs = try XCTUnwrap(obj["timeframes"] as? [[String: Any]])
+        XCTAssertEqual(tfs.first?["id"] as? String, "1m")
+    }
+
     func testParseViewportChangeEvent() {
         let json = """
         {"type":"viewportChange","payload":{"viewport":{"startIndex":0,"endIndex":99,"barWidth":8.5}}}

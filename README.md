@@ -655,6 +655,32 @@ To remove a bracket without a price: use `removeBracket(bracketType: "sl")` (dra
 
 **Estimated P&L on bracket lines:** Call `setDraftBracketPnl(bracketType: "sl", pnlText: "-$12.50")` to display a consumer-calculated P&L string next to the active bracket line on the chart. The text attaches to whichever level is the active bracket host — the draft order while drafting, or the currently selected existing pending order / position while modifying. Call `selectLevel(label: orderId)` (or have the user tap a level) before pushing the P&L text for an existing order. Pass `nil` as `pnlText` to clear.
 
+## Native UI catalog (`onCatalog` / `getCatalog()`)
+
+Apps that build their **own** header, drawing-tools sheet, indicators list and chart-settings screen get everything they need from the chart as one JSON — no hard-coded lists. The chart sends it **automatically once after every init**; `getCatalog()` asks for it again at any time (also before init).
+
+```swift
+// 1. Receive and store it (e.g. UserDefaults / file / Core Data), keyed by version.
+chart.onCatalog = { event in
+    guard case let .catalog(catalogVersion, catalogJson) = event else { return }
+    if catalogVersion != UserDefaults.standard.string(forKey: "chartCatalogVersion") {
+        UserDefaults.standard.set(catalogVersion, forKey: "chartCatalogVersion")
+        UserDefaults.standard.set(catalogJson, forKey: "chartCatalogJson")   // raw JSON, store as-is
+    }
+    ChartUIStore.shared.load(catalogJson)   // decode with Codable, build the native screens
+}
+
+// 2. Optional: request it again (refresh a cached copy, or before init).
+chart.getCatalog()
+```
+
+| Associated value of `.catalog` | Meaning |
+|---|---|
+| `catalogVersion` | Chart library version the catalog belongs to — rebuild your UI only when it changes |
+| `catalogJson` | The whole catalog, raw JSON |
+
+Top-level keys inside `catalogJson`: `catalogVersion`, `toolbar`, `timeframes`, `durations`, `seriesTypes`, `cursors`, `drawingGroups` (tools with `points`, `hasText`, `styleFields`), `drawingToolbarOptions`, `drawingStyleDefaults`, `indicators` (with `pane` and editable `fields`), `chartSettings` (tabs → sections → items with `type`, `options`, `default`), `canvasColorKeys`, `priceSources`, `limits`. Every entry has `"available"`: `true` = works in this chart version, `false` = planned — hide those. Use each entry's `id` with the existing commands, e.g. `setSeries("hollow")`, `setDrawingTool("trendLine")`, `addIndicator("RSI")`, `setCanvasColors(...)`.
+
 ## Header crosshair switch
 
 Pass `enableCrossHairHeader: true` to the constructor to put a crosshair icon in the chart header. The chart crosshair is shown as usual on load and the icon is tinted. Tapping the icon hides the crosshair — and the floating "place order at this price" button that rides on it — and the icon drops to its plain state; tapping again brings both back.

@@ -47,6 +47,14 @@ public enum BridgeEvent {
     /// Response to a `getState` command; contains the full serialised state JSON.
     case stateSnapshot(String)
 
+    /// The native-UI catalog: everything the app needs to build its own header, chart-type
+    /// list, drawing-tools sheet, indicators list and chart-settings screen — ids, labels,
+    /// defaults, indicator settings fields, and `available` per entry (true = works in this
+    /// chart version). Sent once after every init and on ``BridgeCommand/getCatalog``.
+    /// - catalogVersion: chart library version — cache the JSON and rebuild your UI only when it changes.
+    /// - catalogJson: the whole catalog as a raw JSON string (store as-is, decode with `Codable`).
+    case catalog(catalogVersion: String, catalogJson: String)
+
     /// `loadData` command completed successfully.
     case dataLoaded(barCount: Int)
 
@@ -269,6 +277,13 @@ public enum BridgeEvent {
                 let stateJson = String(data: stateData, encoding: .utf8)
             else { return nil }
             return .stateSnapshot(stateJson)
+
+        case "catalog":
+            guard
+                let catalogData = try? JSONSerialization.data(withJSONObject: p),
+                let catalogJson = String(data: catalogData, encoding: .utf8)
+            else { return nil }
+            return .catalog(catalogVersion: p["catalogVersion"] as? String ?? "", catalogJson: catalogJson)
 
         case "dataLoaded":
             return .dataLoaded(barCount: p["barCount"] as? Int ?? 0)

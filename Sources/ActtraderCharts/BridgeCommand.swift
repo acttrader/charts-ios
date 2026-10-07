@@ -303,6 +303,10 @@ public enum BridgeCommand {
     /// Requests the current chart state; fires a `stateSnapshot` event in response.
     case getState
 
+    /// Asks the chart to send the native-UI catalog again (`catalog` event). The chart already
+    /// sends it once after every init; use this to refresh a cached copy. Works before init.
+    case getCatalog
+
     /// Restores a previously captured chart state.
     /// - Parameter stateJson: Raw JSON string from a prior `stateSnapshot` event.
     case setState(String)
@@ -657,6 +661,9 @@ public enum BridgeCommand {
 
         case .getState:
             envelope = ["type": "getState", "payload": [:]]
+
+        case .getCatalog:
+            envelope = ["type": "getCatalog", "payload": [:]]
 
         case let .setState(stateJson):
             guard
