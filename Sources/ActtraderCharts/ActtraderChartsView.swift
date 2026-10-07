@@ -417,6 +417,11 @@ public class ActtraderChartsView: UIView {
     /// Called in response to `getState()`; contains the full serialised state JSON.
     public var onStateSnapshot: ((BridgeEvent) -> Void)?
 
+    /// Called with the native-UI catalog once after every init (and on ``getCatalog()``).
+    /// Save `catalogJson` keyed by `catalogVersion` and build the native header, tools and
+    /// settings screens from it — entries with `"available": false` are planned features you can hide.
+    public var onCatalog: ((BridgeEvent) -> Void)?
+
     /// Called after `loadData()` completes.
     public var onDataLoaded: ((BridgeEvent) -> Void)?
 
@@ -684,6 +689,12 @@ public class ActtraderChartsView: UIView {
     /// The result is delivered asynchronously via `onStateSnapshot`.
     public func getState() {
         sendCommand(.getState)
+    }
+
+    /// Asks the chart to send the native-UI catalog again; it arrives in ``onCatalog``.
+    /// Not needed on start-up — the chart sends it automatically after init.
+    public func getCatalog() {
+        sendCommand(.getCatalog)
     }
 
     /// Restores a previously captured chart state.
@@ -1073,6 +1084,7 @@ public class ActtraderChartsView: UIView {
         case .durationChange: onDurationChange?(event)
         case .stateChange:  onStateChange?(event)
         case .stateSnapshot: onStateSnapshot?(event)
+        case .catalog:       onCatalog?(event)
         case .dataLoaded:   onDataLoaded?(event)
         case .newBar:       onNewBar?(event)
         case .streamStatus: onStreamStatus?(event)
