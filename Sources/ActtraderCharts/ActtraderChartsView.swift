@@ -1401,6 +1401,35 @@ public class ActtraderChartsView: UIView {
         case .indicatorAdded:      onIndicatorAdded?(event)
         case .indicatorRemoved:    onIndicatorRemoved?(event)
         case .error:               onError?(event)
+        // No typed callback yet — these reach the host through `onBridgeEvent` above.
+        case .autoScaleChange,
+             .barColorSourceChange,
+             .canvasOptionsChange,
+             .chartSettingsApplied,
+             .copyDrawingsToAllChange,
+             .cursorModeChange,
+             .drawingCreated,
+             .drawingToolbarVisibility,
+             .goToDate,
+             .indicatorTemplateApplied,
+             .indicatorTemplateDeleted,
+             .indicatorTemplateSaved,
+             .keepDrawingModeChange,
+             .layoutApplied,
+             .layoutDeleted,
+             .layoutSaved,
+             .magnetModeChange,
+             .pricePrecisionChange,
+             .priceScaleModeChange,
+             .quickSearchCommand,
+             .scalesChange,
+             .settingsTemplateApplied,
+             .settingsTemplateDeleted,
+             .settingsTemplateSaved,
+             .sidePanelVisibility,
+             .statusLineChange,
+             .timezoneChange:
+            break
         }
     }
 }
