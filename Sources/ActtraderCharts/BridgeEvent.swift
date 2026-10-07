@@ -189,6 +189,123 @@ public enum BridgeEvent {
     case indicatorRemoved(instanceId: String, shortName: String)
 
     /// An error occurred inside the chart engine.
+    // ── Snapshot ──────────────────────────────────────────────────────────────
+
+    /// The chart was captured — by the user picking Download/Copy, or by
+    /// ``BridgeCommand/requestSnapshot(action:)``.
+    ///
+    /// - Parameters:
+    ///   - dataUrl: A PNG `data:` URL. Strip the `data:image/png;base64,` prefix and
+    ///     `Data(base64Encoded:)` the rest, then share or save it — the in-WebView
+    ///     browser download does nothing on iOS.
+    ///   - action: `"download"` or `"copy"` — which one the user asked for.
+    case snapshot(dataUrl: String, action: String)
+
+    // ── Layouts ───────────────────────────────────────────────────────────────
+
+    /// The user picked a grid preset or toggled a sync switch. Mount or tear down
+    /// panes to match — the chart owns only the picker.
+    case layoutChange(presetId: String, paneCount: Int, sync: [String: Any])
+
+    /// A workspace was saved as a named layout. **Persist `layoutJson`** — the chart
+    /// holds it only for the lifetime of the view.
+    case layoutSaved(id: String, name: String, layoutJson: String)
+
+    /// A saved layout was restored. `layoutJson` carries every pane, for lazy mounting.
+    case layoutApplied(id: String, name: String, presetId: String, layoutJson: String)
+
+    /// A saved layout was deleted. Remove it from your storage too.
+    case layoutDeleted(id: String)
+
+    // ── Indicator templates ───────────────────────────────────────────────────
+
+    /// An indicator set was saved as a named template. **Persist `templateJson`.**
+    case indicatorTemplateSaved(id: String, name: String, templateJson: String)
+
+    /// A template's indicators replaced the chart's active set.
+    case indicatorTemplateApplied(id: String, name: String, count: Int)
+
+    /// An indicator template was deleted. Remove it from your storage too.
+    case indicatorTemplateDeleted(id: String)
+
+    // ── Chart-settings templates ──────────────────────────────────────────────
+
+    /// A settings template was saved. **Persist `templateJson`.**
+    case settingsTemplateSaved(id: String, name: String, templateJson: String)
+
+    /// A settings template was applied to this chart.
+    case settingsTemplateApplied(id: String, name: String)
+
+    /// A settings template was deleted. Remove it from your storage too.
+    case settingsTemplateDeleted(id: String)
+
+    /// Settings were applied from the Chart Settings dialog.
+    ///
+    /// This chart has already applied them. When `applyToAll` is `true` the user
+    /// asked for every chart — pass `settingsJson` to each of your other chart
+    /// views via ``ActtraderChartsView/applyChartSettings(_:)``.
+    case chartSettingsApplied(settingsJson: String, applyToAll: Bool)
+
+    // ── Quick Search ──────────────────────────────────────────────────────────
+
+    /// A Quick Search command ran. It has already executed — use this for
+    /// analytics, or to mirror the action into your own chrome.
+    case quickSearchCommand(id: String, label: String, group: String)
+
+    // ── Cursors ───────────────────────────────────────────────────────────────
+
+    /// The pointer mode changed — via ``BridgeCommand/setCursorMode(mode:)`` or
+    /// the Cursors group in the drawing toolbar. Persist it to restore the choice.
+    case cursorModeChange(mode: String)
+
+    // ── Drawing toolbar options ───────────────────────────────────────────────
+
+    /// Magnet mode toggled from the toolbar. Persist it to restore the choice.
+    case magnetModeChange(enabled: Bool)
+
+    /// Keep-drawing mode toggled from the toolbar.
+    case keepDrawingModeChange(enabled: Bool)
+
+    /// "Copy to all charts" toggled from the toolbar.
+    case copyDrawingsToAllChange(enabled: Bool)
+
+    /// The drawing toolbar was shown or hidden.
+    case drawingToolbarVisibility(visible: Bool)
+
+    /// A drawing was completed. When `copyToAll` is true, send `drawingJson` to
+    /// your other chart views — the chart cannot replicate it itself.
+    case drawingCreated(type: String, drawingJson: String, copyToAll: Bool)
+
+    /// Decimal places for prices changed, whether pinned or re-inferred.
+    case pricePrecisionChange(digits: Int)
+
+    /// Bar colouring switched. `source` is `"open"` or `"previousClose"`.
+    case barColorSourceChange(source: String)
+
+    /// The display timezone changed. Always a resolved IANA name, never `"local"`.
+    case timezoneChange(timezone: String)
+
+    /// A status-line field was shown or hidden. Carries the whole set as JSON.
+    case statusLineChange(statusLineJson: String)
+
+    /// A scales option changed. Carries the whole set as JSON.
+    case scalesChange(scalesJson: String)
+
+    /// A canvas option changed. Carries the whole set as JSON.
+    case canvasOptionsChange(canvasJson: String)
+
+    /// The price axis switched. `mode` is `"normal"`, `"log"` or `"percent"`.
+    case priceScaleModeChange(mode: String)
+
+    /// Automatic Y-range fitting was turned on or off.
+    case autoScaleChange(enabled: Bool)
+
+    /// The chart scrolled to a date. Carries the bar it settled on.
+    case goToDate(time: Int64, barIndex: Int)
+
+    /// The side panel was shown or hidden. `tab` is `"data"` or `"objects"`.
+    case sidePanelVisibility(visible: Bool, tab: String)
+
     case error(message: String, code: String?)
 
     // ── Parser ────────────────────────────────────────────────────────────────
@@ -530,6 +647,160 @@ public enum BridgeEvent {
             else { return nil }
             return .indicatorRemoved(instanceId: instanceId, shortName: shortName)
 
+        case "snapshot":
+            guard let dataUrl = p["dataUrl"] as? String else { return nil }
+            return .snapshot(dataUrl: dataUrl, action: p["action"] as? String ?? "download")
+
+        case "layoutChange":
+            guard let presetId = p["presetId"] as? String else { return nil }
+            let preset = p["preset"] as? [String: Any] ?? [:]
+            return .layoutChange(presetId: presetId,
+                                 paneCount: preset["count"] as? Int ?? 0,
+                                 sync: p["sync"] as? [String: Any] ?? [:])
+
+        case "layoutSaved":
+            guard
+                let layout = p["layout"] as? [String: Any],
+                let id   = layout["id"]   as? String,
+                let name = layout["name"] as? String,
+                let json = Self.jsonString(layout)
+            else { return nil }
+            return .layoutSaved(id: id, name: name, layoutJson: json)
+
+        case "layoutApplied":
+            guard
+                let id = p["id"] as? String,
+                let name = p["name"] as? String,
+                let presetId = p["presetId"] as? String
+            else { return nil }
+            let json = Self.jsonString(p["layout"] as? [String: Any] ?? [:]) ?? "{}"
+            return .layoutApplied(id: id, name: name, presetId: presetId, layoutJson: json)
+
+        case "layoutDeleted":
+            guard let id = p["id"] as? String else { return nil }
+            return .layoutDeleted(id: id)
+
+        case "indicatorTemplateSaved":
+            guard
+                let tpl = p["template"] as? [String: Any],
+                let id   = tpl["id"]   as? String,
+                let name = tpl["name"] as? String,
+                let json = Self.jsonString(tpl)
+            else { return nil }
+            return .indicatorTemplateSaved(id: id, name: name, templateJson: json)
+
+        case "indicatorTemplateApplied":
+            guard
+                let id = p["id"] as? String,
+                let name = p["name"] as? String
+            else { return nil }
+            return .indicatorTemplateApplied(id: id, name: name, count: p["count"] as? Int ?? 0)
+
+        case "indicatorTemplateDeleted":
+            guard let id = p["id"] as? String else { return nil }
+            return .indicatorTemplateDeleted(id: id)
+
+        case "settingsTemplateSaved":
+            guard
+                let tpl = p["template"] as? [String: Any],
+                let id   = tpl["id"]   as? String,
+                let name = tpl["name"] as? String,
+                let json = Self.jsonString(tpl)
+            else { return nil }
+            return .settingsTemplateSaved(id: id, name: name, templateJson: json)
+
+        case "settingsTemplateApplied":
+            guard
+                let id = p["id"] as? String,
+                let name = p["name"] as? String
+            else { return nil }
+            return .settingsTemplateApplied(id: id, name: name)
+
+        case "settingsTemplateDeleted":
+            guard let id = p["id"] as? String else { return nil }
+            return .settingsTemplateDeleted(id: id)
+
+        case "chartSettingsApplied":
+            let settings = p["settings"] as? [String: Any] ?? [:]
+            guard let json = Self.jsonString(settings) else { return nil }
+            return .chartSettingsApplied(settingsJson: json,
+                                         applyToAll: p["applyToAll"] as? Bool ?? false)
+
+        case "quickSearchCommand":
+            guard let id = p["id"] as? String else { return nil }
+            return .quickSearchCommand(id: id,
+                                       label: p["label"] as? String ?? "",
+                                       group: p["group"] as? String ?? "")
+
+        case "cursorModeChange":
+            guard let mode = p["mode"] as? String else { return nil }
+            return .cursorModeChange(mode: mode)
+
+        case "magnetModeChange":
+            return .magnetModeChange(enabled: p["enabled"] as? Bool ?? false)
+
+        case "keepDrawingModeChange":
+            return .keepDrawingModeChange(enabled: p["enabled"] as? Bool ?? false)
+
+        case "copyDrawingsToAllChange":
+            return .copyDrawingsToAllChange(enabled: p["enabled"] as? Bool ?? false)
+
+        case "drawingToolbarVisibility":
+            return .drawingToolbarVisibility(visible: p["visible"] as? Bool ?? true)
+
+        case "drawingCreated":
+            guard
+                let drawing = p["drawing"] as? [String: Any],
+                let json = Self.jsonString(drawing)
+            else { return nil }
+            return .drawingCreated(
+                type: drawing["type"] as? String ?? "",
+                drawingJson: json,
+                copyToAll: p["copyToAll"] as? Bool ?? false
+            )
+
+        case "pricePrecisionChange":
+            return .pricePrecisionChange(digits: p["digits"] as? Int ?? 2)
+
+        case "barColorSourceChange":
+            return .barColorSourceChange(source: p["source"] as? String ?? "open")
+
+        case "timezoneChange":
+            return .timezoneChange(timezone: p["timezone"] as? String ?? "UTC")
+
+        case "statusLineChange":
+            guard let o = p["statusLine"] as? [String: Any], let j = Self.jsonString(o)
+            else { return nil }
+            return .statusLineChange(statusLineJson: j)
+
+        case "scalesChange":
+            guard let o = p["scales"] as? [String: Any], let j = Self.jsonString(o)
+            else { return nil }
+            return .scalesChange(scalesJson: j)
+
+        case "canvasOptionsChange":
+            guard let o = p["canvas"] as? [String: Any], let j = Self.jsonString(o)
+            else { return nil }
+            return .canvasOptionsChange(canvasJson: j)
+
+        case "priceScaleModeChange":
+            return .priceScaleModeChange(mode: p["mode"] as? String ?? "normal")
+
+        case "autoScaleChange":
+            return .autoScaleChange(enabled: p["enabled"] as? Bool ?? true)
+
+        case "goToDate":
+            return .goToDate(
+                time: (p["time"] as? NSNumber)?.int64Value ?? 0,
+                barIndex: p["barIndex"] as? Int ?? 0
+            )
+
+        case "sidePanelVisibility":
+            return .sidePanelVisibility(
+                visible: p["visible"] as? Bool ?? false,
+                tab: p["tab"] as? String ?? "data"
+            )
+
         case "error":
             let message = p["message"] as? String ?? "Unknown error"
             let code    = p["code"]    as? String
@@ -538,5 +809,18 @@ public enum BridgeEvent {
         default:
             return nil
         }
+    }
+
+    /// Re-serialises a payload sub-object back to a JSON string.
+    ///
+    /// Templates and layouts cross the bridge opaquely: the app stores the string
+    /// the chart handed it and sends the same string back, so Swift never has to
+    /// mirror a `ChartState` that only the chart interprets.
+    private static func jsonString(_ object: [String: Any]) -> String? {
+        guard
+            let data = try? JSONSerialization.data(withJSONObject: object),
+            let json = String(data: data, encoding: .utf8)
+        else { return nil }
+        return json
     }
 }

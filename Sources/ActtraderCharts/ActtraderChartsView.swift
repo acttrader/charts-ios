@@ -242,6 +242,36 @@ public class ActtraderChartsView: UIView {
         /// visible range, so the line placed from your order form comes into view.
         /// Default: `false`.
         revealNewBrackets: Bool? = nil,
+        /// The opt-in header features — indicator templates, chart-settings templates,
+        /// saved layouts and Quick Search. Omit for the chart's long-standing
+        /// behaviour; see ``HeaderFeatures``.
+        headerFeatures: HeaderFeatures? = nil,
+        /// Box/reversal parameters for the price-transform chart types (Renko,
+        /// Line Break, Kagi, Point & Figure) as a JSON object string. Omit for ATR(14).
+        seriesOptionsJson: String? = nil,
+        /// Initial pointer mode: `"cross"` (default), `"dot"`, `"arrow"`,
+        /// `"demonstration"` or `"eraser"`.
+        cursorMode: String? = nil,
+        /// Show an OHLCV readout beside a long press. Default: `false`.
+        valueTooltip: Bool? = nil,
+        /// Add the Cursors group to the top of the drawing toolbar. Default: `false`.
+        enableCursorModes: Bool? = nil,
+        enableIconTools: Bool? = nil,
+        enableChartSettings: Bool? = nil,
+        statusLineJson: String? = nil,
+        scalesJson: String? = nil,
+        canvasJson: String? = nil,
+        barColorSource: String? = nil,
+        enableScaleControls: Bool? = nil,
+        priceScaleMode: String? = nil,
+        autoScale: Bool? = nil,
+        enableSidePanels: Bool? = nil,
+        /// Snap drawing points to bar OHLC values. Default: `false`.
+        magnetMode: Bool? = nil,
+        /// Keep the drawing tool armed after each drawing. Default: `false`.
+        keepDrawingMode: Bool? = nil,
+        /// Announce new drawings for layout-wide replication. Default: `false`.
+        copyDrawingsToAllCharts: Bool? = nil,
         initialState: String? = nil
     ) {
         // Build WKWebView configuration
@@ -363,7 +393,25 @@ public class ActtraderChartsView: UIView {
             orderLineDragSnap: orderLineDragSnap,
             orderLineAnchorPersistence: orderLineAnchorPersistence,
             orderLineDefaultAnchor: orderLineDefaultAnchor,
-            revealNewBrackets: revealNewBrackets
+            revealNewBrackets: revealNewBrackets,
+            headerFeatures: headerFeatures,
+            seriesOptionsJson: seriesOptionsJson,
+            cursorMode: cursorMode,
+            valueTooltip: valueTooltip,
+            enableCursorModes: enableCursorModes,
+            enableIconTools: enableIconTools,
+            enableChartSettings: enableChartSettings,
+            statusLineJson: statusLineJson,
+            scalesJson: scalesJson,
+            canvasJson: canvasJson,
+            barColorSource: barColorSource,
+            enableScaleControls: enableScaleControls,
+            priceScaleMode: priceScaleMode,
+            autoScale: autoScale,
+            enableSidePanels: enableSidePanels,
+            magnetMode: magnetMode,
+            keepDrawingMode: keepDrawingMode,
+            copyDrawingsToAllCharts: copyDrawingsToAllCharts
         ))
 
         // Queue state restoration alongside the init command so both are evaluated
@@ -684,6 +732,86 @@ public class ActtraderChartsView: UIView {
         sendCommand(.clearAllDrawings)
     }
 
+    /// Chooses what the status line shows, e.g. `{"barChange":true}`. Merges.
+    public func setStatusLineSettings(_ statusLineJson: String) {
+        sendCommand(.setStatusLineSettings(statusLineJson: statusLineJson))
+    }
+
+    /// Price/time axis options, e.g. `{"timezone":"Asia/Tokyo"}`. Merges.
+    public func setScalesSettings(_ scalesJson: String) {
+        sendCommand(.setScalesSettings(scalesJson: scalesJson))
+    }
+
+    /// Grid, watermark and crosshair options, e.g. `{"gridVertical":false}`. Merges.
+    public func setCanvasOptions(_ canvasJson: String) {
+        sendCommand(.setCanvasOptions(canvasJson: canvasJson))
+    }
+
+    /// `"open"` (default) or `"previousClose"` bar colouring.
+    public func setBarColorSource(_ source: String) {
+        sendCommand(.setBarColorSource(source: source))
+    }
+
+    /// Decimal places for prices; `nil` infers them from the feed again.
+    public func setPricePrecision(_ digits: Int?) {
+        sendCommand(.setPricePrecision(digits: digits))
+    }
+
+    /// `"normal"` (default), `"log"` or `"percent"` price axis.
+    public func setPriceScaleMode(_ mode: String) {
+        sendCommand(.setPriceScaleMode(mode: mode))
+    }
+
+    /// Turns automatic Y-range fitting on or off.
+    public func setAutoScale(_ enabled: Bool) {
+        sendCommand(.setAutoScale(enabled: enabled))
+    }
+
+    /// Scrolls to a date, centring the nearest bar. ISO 8601 or unix ms.
+    public func goToDate(_ date: String) {
+        sendCommand(.goToDate(date: date))
+    }
+
+    /// Shows or hides the docked Data Window / Objects panel.
+    public func setSidePanelVisible(_ visible: Bool) {
+        sendCommand(.setSidePanelVisible(visible: visible))
+    }
+
+    /// Switches the panel. `tab` is `"data"` or `"objects"`.
+    public func setSidePanelTab(_ tab: String) {
+        sendCommand(.setSidePanelTab(tab: tab))
+    }
+
+    /// Shows or hides one drawing by id.
+    public func setDrawingVisible(_ id: String, visible: Bool) {
+        sendCommand(.setDrawingVisible(id: id, visible: visible))
+    }
+
+    /// Locks or unlocks one drawing by id.
+    public func setDrawingLocked(_ id: String, locked: Bool) {
+        sendCommand(.setDrawingLocked(id: id, locked: locked))
+    }
+
+    /// Deletes one drawing by id.
+    public func deleteDrawing(_ id: String) {
+        sendCommand(.deleteDrawing(id: id))
+    }
+
+    /// Selects a drawing by id; `nil` clears the selection.
+    public func selectDrawing(_ id: String?) {
+        sendCommand(.selectDrawing(id: id))
+    }
+
+    /// Appends one drawing, leaving the existing ones alone.
+    ///
+    /// This is how copy-to-all-charts lands: the chart the user drew on emits
+    /// `drawingCreated`, and you forward its `drawingJson` to every other chart
+    /// view in the layout. The chart cannot do it itself — only your app knows
+    /// which panes exist.
+    public func addDrawing(_ drawingJson: String) {
+        sendCommand(.addDrawing(drawingJson: drawingJson))
+    }
+
     /// Requests the current chart state.
     ///
     /// The result is delivered asynchronously via `onStateSnapshot`.
@@ -731,6 +859,160 @@ public class ActtraderChartsView: UIView {
     /// Removes every active compare symbol.
     public func clearCompares() {
         sendCommand(.clearCompares)
+    }
+
+    // ── Snapshot ──────────────────────────────────────────────────────────────
+
+    /// Captures the chart without the user opening the snapshot popover.
+    ///
+    /// The PNG arrives on `.snapshot` as a `data:` URL — decode it and share or save
+    /// it yourself; the in-WebView browser download does nothing on iOS. Requires
+    /// `enableSnapshot` at init.
+    public func requestSnapshot(action: String = "download") {
+        sendCommand(.requestSnapshot(action: action))
+    }
+
+    // ── Indicator templates ───────────────────────────────────────────────────
+
+    /// Replaces the templates listed in the indicators flyout.
+    /// - Parameter templatesJson: A JSON array — the templates your app stored from
+    ///   `.indicatorTemplateSaved`.
+    public func setIndicatorTemplates(_ templatesJson: String) {
+        sendCommand(.setIndicatorTemplates(templatesJson: templatesJson))
+    }
+
+    /// Saves the chart's current indicators; replies on `.indicatorTemplateSaved`.
+    public func captureIndicatorTemplate(_ name: String) {
+        sendCommand(.captureIndicatorTemplate(name: name))
+    }
+
+    /// Replaces the chart's indicators with a template's. Accepts the id or the name.
+    public func applyIndicatorTemplate(_ id: String) {
+        sendCommand(.applyIndicatorTemplate(id: id))
+    }
+
+    /// Removes a template from the flyout. Delete it from your storage too.
+    public func deleteIndicatorTemplate(_ id: String) {
+        sendCommand(.deleteIndicatorTemplate(id: id))
+    }
+
+    // ── Chart-settings templates ──────────────────────────────────────────────
+
+    /// Replaces the templates listed in the Chart Settings dialog.
+    public func setSettingsTemplates(_ templatesJson: String) {
+        sendCommand(.setSettingsTemplates(templatesJson: templatesJson))
+    }
+
+    /// Saves the chart's current settings; replies on `.settingsTemplateSaved`.
+    public func captureSettingsTemplate(_ name: String) {
+        sendCommand(.captureSettingsTemplate(name: name))
+    }
+
+    /// Applies a saved settings template. Accepts the id or the name.
+    public func applySettingsTemplate(_ id: String) {
+        sendCommand(.applySettingsTemplate(id: id))
+    }
+
+    /// Removes a settings template. Delete it from your storage too.
+    public func deleteSettingsTemplate(_ id: String) {
+        sendCommand(.deleteSettingsTemplate(id: id))
+    }
+
+    /// Applies a settings snapshot to this chart.
+    ///
+    /// This is the "Apply to all charts" fan-out: when `.chartSettingsApplied`
+    /// arrives with `applyToAll == true`, pass its `settingsJson` to every other
+    /// chart view you have mounted.
+    public func applyChartSettings(_ settingsJson: String) {
+        sendCommand(.applyChartSettings(settingsJson: settingsJson))
+    }
+
+    // ── Saved layouts ─────────────────────────────────────────────────────────
+
+    /// Replaces the layouts listed in the layout popover.
+    public func setSavedLayouts(_ layoutsJson: String) {
+        sendCommand(.setSavedLayouts(layoutsJson: layoutsJson))
+    }
+
+    /// Saves the current preset and this chart's state; replies on `.layoutSaved`.
+    /// - Parameter paneId: Identifies this chart within the layout — `"main"` for a
+    ///   single-chart screen, a distinct id per pane in a grid.
+    public func captureSavedLayout(_ name: String, paneId: String = "main") {
+        sendCommand(.captureSavedLayout(name: name, paneId: paneId))
+    }
+
+    /// Restores a saved layout into this chart. Accepts the id or the name.
+    public func applySavedLayout(_ id: String, paneId: String = "main") {
+        sendCommand(.applySavedLayout(id: id, paneId: paneId))
+    }
+
+    /// Removes a saved layout. Delete it from your storage too.
+    public func deleteSavedLayout(_ id: String) {
+        sendCommand(.deleteSavedLayout(id: id))
+    }
+
+    /// Selects a grid preset. Emits `.layoutChange`; mounting the panes stays your
+    /// app's job — the chart owns only the picker.
+    public func setLayoutPreset(_ presetId: String) {
+        sendCommand(.setLayoutPreset(presetId: presetId))
+    }
+
+    // ── Drawing toolbar options ───────────────────────────────────────────────
+
+    /// Snaps drawing points to the nearest OHLC of the bar under the cursor.
+    public func setMagnetMode(_ enabled: Bool) { sendCommand(.setMagnetMode(enabled: enabled)) }
+
+    /// Keeps the active tool armed after each drawing, for placing a series.
+    public func setKeepDrawingMode(_ enabled: Bool) { sendCommand(.setKeepDrawingMode(enabled: enabled)) }
+
+    /// Announces new drawings via `.drawingCreated` for layout-wide replication.
+    public func setCopyDrawingsToAllCharts(_ enabled: Bool) {
+        sendCommand(.setCopyDrawingsToAllCharts(enabled: enabled))
+    }
+
+    /// Shows or hides the drawing toolbar at runtime.
+    public func setDrawingToolbarVisible(_ visible: Bool) {
+        sendCommand(.setDrawingToolbarVisible(visible: visible))
+    }
+
+    // ── Cursors ───────────────────────────────────────────────────────────────
+
+    /// Switches pointer behaviour over the plot.
+    ///
+    /// Independent of the drawing tool — switching mode never cancels a drawing in
+    /// progress. Replies with `.cursorModeChange`.
+    ///
+    /// - Parameter mode: `"cross"`, `"dot"`, `"arrow"`, `"demonstration"` or `"eraser"`.
+    public func setCursorMode(_ mode: String) {
+        sendCommand(.setCursorMode(mode: mode))
+    }
+
+    // ── Chart types ───────────────────────────────────────────────────────────
+
+    /// Retunes the price-transform chart types — Renko, Line Break, Kagi and
+    /// Point & Figure.
+    ///
+    /// Merged over the current options, so one series can be retuned without
+    /// disturbing the others. The chart *type* is still chosen with
+    /// ``setSeries(_:)``: `"hlc"`, `"renko"`, `"linebreak"`, `"kagi"` and
+    /// `"pointfigure"` are new values of the same series string.
+    public func setSeriesOptions(_ optionsJson: String) {
+        sendCommand(.setSeriesOptions(optionsJson: optionsJson))
+    }
+
+    // ── Quick Search ──────────────────────────────────────────────────────────
+
+    /// Opens the command palette over everything the chart can do.
+    ///
+    /// The web build opens this with Ctrl/⌘+K or `/`; iOS has neither, so this is
+    /// the entry point — wire it to a toolbar item. Requires `enableQuickSearch`.
+    public func openQuickSearch() {
+        sendCommand(.openQuickSearch)
+    }
+
+    /// Closes the command palette.
+    public func closeQuickSearch() {
+        sendCommand(.closeQuickSearch)
     }
 
     /// Resolves a pending `.compareDataRequest` with fetched bars.

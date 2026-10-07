@@ -517,6 +517,603 @@ let chart = ActtraderChartsView(
 chart.setLayoutSync(LayoutSync(crosshair: true))
 ```
 
+## Side panels
+
+A right-hand docked panel with two tabs — **Data Window** (OHLC and indicator
+values at the cursor) and **Objects** (everything drawn on the chart) — behind
+the `enableSidePanels` init flag.
+
+```swift
+ActtraderChartsView(enableSidePanels: true)
+```
+
+```swift
+chart.setSidePanelTab("objects")
+chart.setSidePanelVisible(false)
+
+// Per-object controls, for driving the list from your own UI.
+chart.setDrawingVisible(id, visible: false)
+chart.setDrawingLocked(id, locked: true)
+chart.deleteDrawing(id)
+chart.selectDrawing(id)        // nil clears the selection
+```
+
+**Closing it collapses the panel to a 30px icon rail, it does not hide it** —
+a panel that vanished would leave nothing to tap to get it back. Expanded it
+takes 232px out of the plot, which is why the feature is off by default and why
+you will probably want it collapsed on a phone. `setSidePanelVisible` is the
+expanded-versus-rail switch; the init flag is what removes it entirely.
+
+The Data Window follows the crosshair, falling back to the last bar when the
+cursor is off the plot. The Objects tab lists drawings and indicators with
+show/hide, lock and remove per row; tapping a drawing selects it on the chart.
+
+A change made inside the panel reaches your app:
+
+```swift
+case let .sidePanelVisibility(visible, tab): …
+```
+
+
+## Bottom bar & price scale
+
+Five TradingView controls, behind the `enableScaleControls` init flag. The flag
+adds a cluster to the left of the duration buttons — **Go to date**, a
+**timezone** selector, and **%**, **log**, **auto** — and needs
+`showBottomBar = true`, since the duration bar is off by default.
+
+```swift
+ActtraderChartsView(
+    showBottomBar: true,
+    enableScaleControls: true,
+    priceScaleMode: "log",
+    autoScale: true
+)
+```
+
+```swift
+chart.setPriceScaleMode("log")    // "normal" | "log" | "percent"
+chart.setAutoScale(false)
+chart.goToDate("2024-03-01")      // ISO 8601, or unix ms as a string
+```
+
+**`goToDate` centres the nearest bar**, not an exact match: the date asked for is
+often a weekend or a holiday, and landing beside it beats not moving. It reports
+back which bar it settled on.
+
+**Log maps equal ratios to equal height** — a move from 10 to 20 takes the same
+space as one from 100 to 200. It is unavailable on data that reaches zero or
+below and maps linearly there rather than refusing to draw.
+
+**Percent** re-expresses every price as change from the first visible bar's
+close, so panning re-bases rather than pinning to the start of history. Log and
+percent are one choice, not two flags.
+
+**Turning auto-scale off freezes what is on screen**, so the chart does not jump
+as it stops moving. A manual axis drag still wins.
+
+Each fires a matching event, so a change made in the bar reaches your app:
+
+```swift
+case let .priceScaleModeChange(mode): …
+case let .autoScaleChange(enabled): …
+case let .goToDate(time, barIndex): …
+```
+
+
+## Chart settings
+
+Six TradingView settings, behind the `enableChartSettings` init flag. The flag
+adds three tabs — **Status Line**, **Scales**, **Canvas** — to the chart's
+settings dialog and a bar-colouring choice to Appearance. Each is also an init
+parameter and a runtime method, so you can drive them from your own UI and leave
+the dialog alone.
+
+```swift
+ActtraderChartsView(
+    enableChartSettings: true,
+    statusLineJson: #"{"barChange":true}"#,
+    scalesJson: #"{"pricePrecision":4,"timezone":"Asia/Tokyo"}"#,
+    canvasJson: #"{"gridVertical":false,"watermarkVisible":true}"#,
+    barColorSource: "previousClose"
+)
+```
+
+The three group parameters take **raw JSON**, the same opaque-string convention
+`themeOverrides` and `canvasColors` already use — the shapes are nested and
+would otherwise need a parallel data class per group in each wrapper.
+
+| Group | Keys |
+| --- | --- |
+| `statusLine` | `symbol`, `ohlc`, `barChange`, `volume` |
+| `scales` | `lastPriceLabel`, `bidLabel`, `askLabel`, `highLowLabels`, `timeAxisCountdown`, `pricePrecision`, `timezone` |
+| `canvas` | `gridHorizontal`, `gridVertical`, `watermarkVisible`, `watermarkText`, `watermarkSize`, `watermarkOpacity`, `crosshairStyle`, `crosshairWidth` |
+
+```swift
+chart.setStatusLineSettings(#"{"barChange":true}"#)
+chart.setScalesSettings(#"{"highLowLabels":true}"#)
+chart.setCanvasOptions(#"{"gridVertical":false}"#)
+chart.setBarColorSource("previousClose")
+chart.setPricePrecision(4)   // nil re-infers from the feed
+```
+
+**Every setter merges.** Keys you leave out keep whatever they are, so you can
+flip one without restating the rest.
+
+**Price precision is display only.** It does not change pip size, which is a
+property of the contract and comes from `InstrumentSpec` — the Ruler keeps
+saying what a move is actually worth however few decimals the axis shows.
+
+**`barColorSource`** is `"open"` (the default) or `"previousClose"`. It applies
+to candles, hollow candles, bars, HLC bars, columns and the volume pane
+together. Heikin Ashi, Renko, Kagi and Point & Figure are unaffected —
+direction is intrinsic to what those transforms compute.
+
+Each setting fires a matching event, so a change made in the dialog reaches your
+app:
+
+```swift
+case let .pricePrecisionChange(digits): …
+case let .barColorSourceChange(source): …
+case let .timezoneChange(timezone): …
+case let .statusLineChange(json): …
+case let .scalesChange(json): …
+case let .canvasOptionsChange(json): …
+```
+
+
+## Icons & drawing toolbar options
+
+### Icons, emojis & stickers — `"icon"`
+
+A glyph placed at a bar and price, behind the `enableIconTools` init flag.
+**One tool, not three**: emojis, stickers and icons are the same drawing with a
+different character, so the toolbar's **Icons & Emojis** group picks the glyph
+and the glyph travels in the drawing's text.
+
+```swift
+ActtraderChartsView(enableIconTools: true)
+```
+
+Opening the group gives a picker panel — category tabs across the top, a
+scrolling grid, and **Emojis / Stickers / Icons** along the bottom. Stickers are
+the same characters placed larger; Icons are monochrome and take the drawing's
+colour, which an emoji cannot since it is a colour bitmap in the system font.
+
+A placed icon is **resizable by dragging any of its four corner handles**, and
+its size is also in the style popover. The size is in pixels, so it does not
+rescale when the chart is zoomed — a pin dropped on a bar stays the size it was
+put at. Touch drags resize it too.
+
+`"zoomIn"` drags a box and zooms the chart to it, removing itself once applied.
+Both tools are `setDrawingTool` strings — no wrapper change.
+
+
+> **Fixed:** `enableCursorModes` was reaching the webview as a flat init key and
+> being dropped before it got to the chart's `features`, so the Cursors group
+> never appeared. It is mapped correctly now, along with `enableIconTools`.
+
+### Toolbar options
+
+| Method | What it does |
+| --- | --- |
+| `setMagnetMode(_)` | Drawing points snap to the nearest OHLC of the bar under the cursor. |
+| `setKeepDrawingMode(_)` | The tool stays armed after each drawing. |
+| `setCopyDrawingsToAllCharts(_)` | New drawings are announced for layout-wide replication. |
+| `setDrawingToolbarVisible(_)` | Shows or hides the drawing toolbar at runtime. |
+
+All four can also be set in `init`, and each has a matching event so a toggle
+flipped from the toolbar reaches your app.
+
+```swift
+chart.setMagnetMode(true)
+```
+
+**Magnet snaps within a pixel threshold, not always** — a line deliberately drawn
+through the middle of a range stays there. The threshold is in pixels so it feels
+identical at every zoom.
+
+**Copy-to-all is announced, not performed.** Only your app knows which panes
+exist, so the chart emits the drawing and you replicate it:
+
+```swift
+case let .drawingCreated(_, json, copyToAll):
+    if copyToAll { otherCharts.forEach { $0.addDrawing(json) } }
+```
+
+`addDrawing` appends — it leaves the drawings already on the target chart alone,
+and the copy gets its own id, so dragging it in one pane does not move it in the
+rest.
+
+
+## Notes & text tools
+
+Six annotation tools, all single-click then type. New `setDrawingTool` strings —
+no wrapper change needed.
+
+| `tool` | Form |
+| --- | --- |
+| `"anchoredText"` | Free text with a dot on the bar and price it refers to. |
+| `"note"` | A compact page marker with the text beside it. |
+| `"pin"` | A teardrop whose **tip** sits exactly on the price. |
+| `"table"` | Rows of text in a bordered grid. |
+| `"comment"` | A rounded speech bubble with its tail on the anchor. |
+| `"signpost"` | A plaque on a post, rising clear of the candles. |
+
+```swift
+chart.setDrawingTool("signpost")
+```
+
+Each opens the chart's text editor on placement. **Anchored Text, Note, Table,
+Comment and Signpost get a multi-line editor** where `Enter` inserts a newline
+and `Ctrl`/`⌘`+`Enter` (or tapping away) commits; Text, Callout, Anchored Note
+and Pin keep the single-line field where `Enter` commits. Double-tapping a
+placed annotation reopens its editor.
+
+**Table syntax**: newlines are rows and `|` separates columns, so a table is
+typed into one text field rather than needing its own editor. The first row is
+tinted as a header. **A new table arrives already a 4x2 grid**, with the syntax
+visible in the editor — an empty one showed a single row and gave no hint that
+rows and columns existed.
+
+**Pin anchors by its tip, not its centre** — a marker whose middle sits on the
+level is ambiguous about which price it means.
+
+
+## Indicator library
+
+**78 studies added**, taking the library from 30 to 108. They are reachable
+through the existing `addIndicator` bridge command by short name — **no wrapper
+change was needed**:
+
+```swift
+chart.addIndicatorByName("TRIX")
+```
+
+Short names include `ALMA`, `DEMA`, `TEMA`, `LSMA`, `McGinley`, `SMMA`, `VWMA`,
+`AMA`, `Guppy`, `TRIX`, `TSI`, `UO`, `Fisher`, `KST`, `CMO`, `CRSI`, `Aroon`,
+`DMI`, `Vortex`, `Chop`, `HV`, `StdDev`, `Env`, `PriceChannel`, `Alligator`,
+`Fractal`, `ZigZag`, `VPVR` and more — see the main
+[ActCharts README](../ActCharts/README.md) for the full table.
+
+### Two things worth knowing
+
+**Five studies need a second instrument.** Correlation Coefficient,
+Correlation – Log, Ratio, Spread and Advance/Decline read the symbols the user
+has added through **Compare**. With none added they draw nothing, rather than
+substituting a stand-in series that would answer a different question than the
+indicator's name promises.
+
+**`maxSubPanes` caps concurrent sub-pane indicators.** Most of these 78 live in
+their own pane, so adding many at once silently stops at the cap. Raise
+`maxSubPanes` in the `init` payload if you need more on screen together.
+
+
+## Shapes & arrow tools
+
+| `tool` | Points | What it does |
+| --- | --- | --- |
+| `"arrowMarkLeft"` | 1 | A mark pointing at a price level from the right. |
+| `"arrowMarkRight"` | 1 | A mark pointing at a price level from the left. |
+| `"curve"` | 3 | A quadratic Bézier between two ends, bent by one handle. |
+| `"doubleCurve"` | 3 | An S — two mirrored quadratics sharing that handle. |
+
+```swift
+chart.setDrawingTool("doubleCurve")
+```
+
+**The line arrow already existed.** `"arrowMarker"` is TradingView's Arrow — a
+line with a filled arrowhead at the tip. It was only ever *labelled* "Arrow
+Marker", which hid it; the label now reads **Arrow**. The tool string is
+unchanged, so nothing in your integration breaks.
+
+**Curve is not `"arc"`.** The arc tool fits a circle through three points, and a
+circle's curvature is constant — it cannot leave one end steeply and arrive at
+the other gently. A Bézier can, which is the whole reason to have both.
+
+
+## Projection & measurement tools
+
+| `tool` | Points | What it does |
+| --- | --- | --- |
+| `"anchoredVwap"` | 1 | Volume-weighted average price accumulated from the anchored bar. |
+| `"forecast"` | 3 | A base move, a projected continuation, and a cone of uncertainty. |
+| `"barsPattern"` | 3 | Replays a chosen bar range's price action at a new anchor. |
+| `"longPosition"` / `"shortPosition"` | 2 | Risk/reward sketches — **already shipped**, see below. |
+
+```swift
+chart.setDrawingTool("anchoredVwap")
+```
+
+**Long / Short Position already exist.** They draw entry, target and stop as a
+green profit zone and a red risk zone with the money and quantity your account's
+risk budget implies, and need `enableForecasting` plus an `account`:
+
+```swift
+ActtraderChartsView(enableForecasting: true, account: AccountSpec(equity: 50_000, riskPercent: 1))
+```
+
+They are drawings, not Trade-From-Chart: nothing they draw reaches the broker.
+
+**Anchored VWAP is not `"anchoredVP"`.** That one is Anchored Volume *Profile* —
+a horizontal histogram of volume by price level. Anchored VWAP is a single line
+from real volume, using the (H+L+C)/3 typical price. **It draws nothing when the
+feed carries no volume**, rather than silently degrading into a running mean that
+looks like a VWAP and is not one.
+
+
+## Pattern tools
+
+Two drawing tools added for TradingView parity. They are new `setDrawingTool`
+strings — no wrapper API change is needed.
+
+| `tool` | Points | What it does |
+| --- | --- | --- |
+| `"xabcdPattern"` | 5 | The free-form harmonic. Reports the measured AB/XA, BC/AB, CD/BC and AD/XA ratios instead of assuming a named set. |
+| `"elliottTripleCombo"` | 6 | The triple three — W-X-Y-X-Z from an origin. |
+
+```swift
+chart.setDrawingTool("xabcdPattern")
+```
+
+**Why XABCD is not just another harmonic:** every named harmonic in the library
+(Gartley, Bat, Butterfly, Crab, Shark, Cypher) draws the identical X→A→B→C→D
+zigzag and differs only in colour — none measures anything. XABCD reports the
+ratios the pivots actually produce, which is what tells you which harmonic the
+structure is.
+
+**Why Triple Combo is not the existing Combination tool:** `"elliottCombination"`
+takes **seven** points and numbers its connectors `X2`/`X3`. A triple three has
+six points and labels both connectors `X`. The existing tool is unchanged.
+
+
+## Fibonacci & Gann tools
+
+Five drawing tools added for TradingView parity. They are new `setDrawingTool`
+strings — no wrapper API change is needed.
+
+| `tool` | Points | What it does |
+| --- | --- | --- |
+| `"trendBasedFibTime"` | 3 | Projects the *duration* of the p1→p2 leg forward from p3 as vertical time lines. |
+| `"fibSpeedResistanceArcs"` | 2 | Arcs at Fibonacci fractions of a trend's length — the Fan's curved counterpart. |
+| `"fibWedge"` | 3 | Arcs bounded by two rays from a shared apex. |
+| `"pitchfan"` | 3 | A pitchfork whose tines radiate from the handle instead of running parallel. |
+| `"gannSquareFixed"` | 2 | A Gann Square forced square in pixels, so its diagonal is a true 45° at any zoom. |
+
+```swift
+chart.setDrawingTool("fibWedge")
+```
+
+Two behaviours worth knowing:
+
+- **Speed Resistance Arcs are ellipses, not circles** — the x and y radii come
+  separately from the trend's run and rise. A pixel-space circle would change
+  shape as soon as the price axis was rescaled.
+- **Gann Square Fixed takes the longer side of the drag for both sides**, so the
+  45° diagonal really is 45°. The box therefore does not match the drag exactly:
+  "fixed" means fixed *proportion*, not fixed size.
+
+
+## Cursors & line tools
+
+### Extending lines
+
+Four drawing tools that differ from a Trend Line only in where they stop being
+drawn. They are new `setDrawingTool` strings — nothing else changes.
+
+| `tool` | What it does |
+| --- | --- |
+| `"ray"` | Two anchors; continues past the second. |
+| `"extendedLine"` | Two anchors; continues past both. |
+| `"horizontalRay"` | One tap; a level that runs **forward only**, not back over history. |
+| `"infoLine"` | A trend line that permanently reports price delta, percent, bars and duration. |
+
+### Cursors
+
+Pointer behaviour over the plot, **independent of the drawing tool** — switching
+mode never cancels a drawing in progress.
+
+| mode | Behaviour |
+| --- | --- |
+| `"cross"` | The default crosshair with its axis readouts. |
+| `"dot"` | A dot follows the pointer instead of two lines across the candles. |
+| `"arrow"` | A plain pointer, no crosshair. |
+| `"demonstration"` | A laser trail that fades behind the pointer, for screen-sharing. |
+| `"eraser"` | A tap deletes the drawing under it. |
+
+```swift
+ActtraderChartsView(
+    cursorMode: "cross",
+    valueTooltip: true,
+    enableCursorModes: true
+)
+
+chart.setCursorMode("eraser")
+```
+
+`enableCursorModes` adds a **Cursors** group to the top of the drawing toolbar.
+It is a flag rather than always-on because it adds a category to a toolbar apps
+have laid out around its current contents. With it off the group is absent and
+the toolbar is unchanged — the modes stay reachable from `setCursorMode`, so you
+can drive them from your own chrome instead.
+
+The eraser consumes every tap, hit or miss: a miss must not fall through to
+selecting or panning, which would be a surprising thing to do with an eraser in
+hand. It deletes through the same undo history as every other delete.
+
+### Value tooltip on long press
+
+`valueTooltip` shows a floating OHLCV readout beside a long press, on top of the
+crosshair that gesture already arms. The OHLC strip at the top of the chart
+carries the same numbers, but on a phone it is at the far end of the screen from
+the finger — the user has to look away from what they are pointing at.
+
+It flips to the other side of the touch rather than running off an edge, never
+takes touch events (the drag is still in progress), and omits volume rather than
+printing a zero when the feed carries none. Default `false`.
+
+### Persisting the choice
+
+```swift
+case let .cursorModeChange(mode): store.set(mode, forKey: "cursorMode")
+```
+
+
+## Chart types
+
+Five types beyond the time-based set, for TradingView parity. They are new values
+of the same `series` string — nothing else about selecting a chart type changes.
+
+| `series` | What it draws |
+| --- | --- |
+| `"hlc"` | HLC bars — the high-low range with a close tick, no open stub. |
+| `"renko"` | Equal-height bricks; reversals need two boxes. |
+| `"linebreak"` | Blocks that print when the close clears the last N blocks. |
+| `"kagi"` | One connected line; thickness tracks breaks of structure. |
+| `"pointfigure"` | Columns of X's and O's on a box grid. |
+
+**The last four are not drawn per time bar.** A brick, block, segment or column
+forms when *price* moves far enough, so 365 daily candles might be 24 bricks or
+15 columns. The chart rebuilds its bar array from price movement, which means:
+
+- the **time axis is non-linear** — labels show when each element completed;
+- **indicators are computed over the elements**, not the underlying candles, the
+  same as TradingView;
+- switching in or out **refits the view**, since the element count changes;
+- **market price still comes off the raw feed**, so trade levels and P&L never
+  price against a brick top.
+
+```swift
+chart.setSeries("renko")
+
+// Parameters travel as a JSON object. Omit entirely for ATR(14) on all of them.
+chart.setSeriesOptions(#"{"renko":{"boxSize":{"kind":"fixed","size":5}}}"#)
+
+// Or at init:
+let chart = ActtraderChartsView(
+    series: "pointfigure",
+    seriesOptionsJson: #"{"pointFigure":{"boxSize":{"kind":"atr","length":20},"reversal":3}}"#
+)
+```
+
+Every box/reversal size defaults to **ATR(14)** rather than a fixed price,
+because a fixed box is meaningless until you know the instrument: ten points is
+noise on an index and a lifetime on a forex pair. `setSeriesOptions` merges, so
+retuning Renko leaves Kagi and Point & Figure alone.
+
+`boxSize` accepts `{"kind":"atr","length":14}`, `{"kind":"fixed","size":5}` or
+`{"kind":"percent","percent":2}`. When a box cannot be sized — too little history
+for the ATR, or a non-positive size — the chart draws **nothing** rather than
+guessing, because a wrong box size does not look wrong, it looks like a different
+market.
+
+
+## Top-toolbar features
+
+Four opt-in features matching the web library's TradingView-parity header work:
+**indicator templates**, **saved chart layouts**, **Quick Search**, and
+**chart-settings templates with "Apply to all charts"**.
+
+Two rules apply to all of them:
+
+- **Nothing moves.** Every flag defaults to off, and with them off the chart renders
+  exactly as before. Enabled, each extends a flyout, popover or dialog that already
+  exists — none adds a header button (Quick Search can, if you ask).
+- **The chart persists nothing.** Saving emits an event carrying the object as JSON;
+  your app stores it and seeds it back at init. Templates and layouts cross the
+  bridge as **opaque JSON strings** — store the string you were handed and send the
+  same string back. Swift never has to mirror a `ChartState` only the chart reads.
+
+### Enabling
+
+The flags are grouped into one `HeaderFeatures` struct rather than nine more
+arguments on `init` — they ship and roll back together.
+
+```swift
+let chart = ActtraderChartsView(
+    theme: "dark",
+    symbol: "EURUSD",
+    enableMultipleLayouts: true,           // saved layouts live in this popover
+    headerFeatures: HeaderFeatures(
+        enableIndicatorTemplates: true,
+        indicatorTemplatesJson: store.string(forKey: "indicatorTemplates") ?? "[]",
+        enableSettingsTemplates: true,
+        settingsTemplatesJson: store.string(forKey: "settingsTemplates") ?? "[]",
+        enableSavedLayouts: true,
+        savedLayoutsJson: store.string(forKey: "savedLayouts") ?? "[]",
+        enableQuickSearch: true            // open it from your own toolbar
+    )
+)
+```
+
+A malformed stored JSON array is dropped rather than throwing — stale storage can
+never stop the chart from starting.
+
+### Commands
+
+| Method | Does |
+| --- | --- |
+| `setIndicatorTemplates(_:)` | Replaces the list in the indicators flyout. |
+| `captureIndicatorTemplate(_:)` | Saves the active indicators → `.indicatorTemplateSaved`. |
+| `applyIndicatorTemplate(_:)` | Applies one. Accepts the id or the name. |
+| `deleteIndicatorTemplate(_:)` | Removes it. |
+| `setSettingsTemplates(_:)` | Replaces the list in the Settings dialog. |
+| `captureSettingsTemplate(_:)` | Saves the current settings → `.settingsTemplateSaved`. |
+| `applySettingsTemplate(_:)` / `deleteSettingsTemplate(_:)` | Apply / remove. |
+| `applyChartSettings(_:)` | Applies a settings snapshot — the apply-to-all fan-out. |
+| `setSavedLayouts(_:)` | Replaces the list in the layout popover. |
+| `captureSavedLayout(_:paneId:)` | Saves the preset + this chart's state → `.layoutSaved`. |
+| `applySavedLayout(_:paneId:)` / `deleteSavedLayout(_:)` | Apply / remove. |
+| `setLayoutPreset(_:)` | Picks a grid shape → `.layoutChange`. |
+| `openQuickSearch()` / `closeQuickSearch()` | Opens / closes the command palette. |
+| `requestSnapshot(action:)` | Captures the chart → `.snapshot`. |
+
+### Events
+
+```swift
+chart.onEvent = { event in
+    switch event {
+    // Persist whatever the chart hands you — it keeps nothing.
+    case let .indicatorTemplateSaved(_, _, templateJson):
+        store.set(append(templateJson), forKey: "indicatorTemplates")
+    case let .indicatorTemplateDeleted(id):
+        removeTemplate(id)
+
+    case let .settingsTemplateSaved(_, _, templateJson):
+        store.set(append(templateJson), forKey: "settingsTemplates")
+
+    case let .layoutSaved(_, _, layoutJson):
+        store.set(append(layoutJson), forKey: "savedLayouts")
+    case let .layoutApplied(_, _, _, layoutJson):
+        mountPanes(layoutJson)
+
+    // "Apply to all charts": this chart already applied them, the fan-out is yours.
+    case let .chartSettingsApplied(settingsJson, applyToAll):
+        if applyToAll { otherCharts.forEach { $0.applyChartSettings(settingsJson) } }
+
+    case let .quickSearchCommand(id, _, _):
+        analytics.track(id)
+
+    // The in-WebView browser download does nothing on iOS — handle it here.
+    case let .snapshot(dataUrl, _):
+        if let base64 = dataUrl.components(separatedBy: "base64,").last,
+           let data = Data(base64Encoded: base64) {
+            share(UIImage(data: data))
+        }
+
+    default:
+        break
+    }
+}
+```
+
+### Quick Search on iOS
+
+There is no Ctrl/⌘+K inside the WebView, so the palette has no keyboard entry point
+— wire `openQuickSearch()` to a toolbar item. `closeQuickSearch()` is worth adding
+to your dismiss handling alongside `dismissAllUI()`.
+
+
 ## Compare symbols
 
 Overlay one or more comparison instruments on the main chart, normalized to
