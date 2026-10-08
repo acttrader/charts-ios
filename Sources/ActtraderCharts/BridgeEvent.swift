@@ -285,6 +285,14 @@ public enum BridgeEvent {
 
     /// The chart scrolled to a date. Carries the bar it settled on.
     case goToDate(time: Int64, barIndex: Int)
+    /// Bar Replay started (or restarted) at the bar with this open time (unix ms).
+    case replayStart(time: Int64)
+    /// Bar Replay revealed the next bar.
+    case replayStep(time: Int64)
+    /// Bar Replay revealed the last hidden bar.
+    case replayEnd(time: Int64)
+    /// Bar Replay ended and the live chart is back.
+    case replayExit
 
     /// The side panel was shown or hidden. `tab` is `"data"` or `"objects"`.
     case sidePanelVisibility(visible: Bool, tab: String)
@@ -767,6 +775,14 @@ public enum BridgeEvent {
                 time: (p["time"] as? NSNumber)?.int64Value ?? 0,
                 barIndex: p["barIndex"] as? Int ?? 0
             )
+        case "replayStart":
+            return .replayStart(time: (p["time"] as? NSNumber)?.int64Value ?? 0)
+        case "replayStep":
+            return .replayStep(time: (p["time"] as? NSNumber)?.int64Value ?? 0)
+        case "replayEnd":
+            return .replayEnd(time: (p["time"] as? NSNumber)?.int64Value ?? 0)
+        case "replayExit":
+            return .replayExit
 
         case "sidePanelVisibility":
             return .sidePanelVisibility(

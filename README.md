@@ -894,6 +894,37 @@ Two behaviours worth knowing:
   "fixed" means fixed *proportion*, not fixed size.
 
 
+## Bar Replay
+
+Replay history bar by bar, as TradingView does. `enableReplay: true` adds a
+**Replay** button to the chart header; it opens a control strip under the chart
+with Select bar / Select date / First available date / Random bar, play, pause,
+step, speed (0.1x–10x) and jump to real-time. Live ticks keep building the
+hidden bars while a replay runs, so nothing is lost when it ends.
+
+```swift
+let chart = ActtraderChartsView(enableReplay: true)
+
+// Or drive it from your own UI:
+chart.openReplay()                 // show the strip, arm "Select bar"
+chart.startReplay(timeMs: t)       // hide bars after this unix-ms time
+chart.setReplaySpeed(3)            // bars per second
+chart.playReplay(); chart.pauseReplay(); chart.replayStepForward()
+chart.exitReplay()                 // back to real time, strip stays open
+chart.closeReplay()                // back to real time and close the strip
+
+chart.onBridgeEvent = { event in
+    switch event {
+    case let .replayStart(time): print("replay from", time)
+    case .replayStep, .replayEnd, .replayExit: break
+    default: break
+    }
+}
+```
+
+Four `BridgeEvent` cases come with this (`replayStart`, `replayStep`, `replayEnd`,
+`replayExit`), so a `switch event` without a `default:` needs one.
+
 ## Cursors & line tools
 
 ### Extending lines
