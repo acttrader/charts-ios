@@ -349,7 +349,9 @@ public enum BridgeCommand {
         /// Announce every new drawing via `.drawingCreated` with `copyToAll`, so
         /// your app can replicate it across the other panes of a layout — the
         /// chart cannot, since only you know which panes exist. Default: `false`.
-        copyDrawingsToAllCharts: Bool? = nil
+        copyDrawingsToAllCharts: Bool? = nil,
+        /// Bar Replay — the Replay button and its control strip. Default: `false`.
+        enableReplay: Bool? = nil
     )
 
     /// Replaces the full dataset.
@@ -466,6 +468,24 @@ public enum BridgeCommand {
 
     /// Shows or hides the docked Data Window / Objects panel.
     case setSidePanelVisible(visible: Bool)
+
+    // ── Bar Replay ───────────────────────────────────────────────────────────
+    /// Opens the Bar Replay strip and arms "Select bar". Requires `enableReplay` on init.
+    case openReplay
+    /// Leaves any running replay and closes the strip.
+    case closeReplay
+    /// Starts a replay: bars after the last bar at or before `time` (unix ms) are hidden until revealed.
+    case startReplay(time: Int64)
+    /// Reveals bars one by one at the replay speed.
+    case playReplay
+    /// Pauses playback.
+    case pauseReplay
+    /// Reveals the next hidden bar.
+    case replayStepForward
+    /// Replay speed in bars per second (0.1 – 10).
+    case setReplaySpeed(barsPerSecond: Double)
+    /// Ends the replay and shows the live chart; the strip stays open.
+    case exitReplay
 
     /// Switches the panel. `tab` is `"data"` or `"objects"`.
     case setSidePanelTab(tab: String)
@@ -803,7 +823,7 @@ public enum BridgeCommand {
                              enableIconTools, enableChartSettings, statusLineJson,
                              scalesJson, canvasJson, barColorSource,
                              enableScaleControls, priceScaleMode, autoScale, enableSidePanels,
-                             magnetMode, keepDrawingMode, copyDrawingsToAllCharts):
+                             magnetMode, keepDrawingMode, copyDrawingsToAllCharts, enableReplay):
             var payload: [String: Any] = ["theme": theme]
             if let symbol { payload["symbol"] = symbol }
             if let instrument { payload["instrument"] = instrument.toDictionary() }
@@ -893,6 +913,7 @@ public enum BridgeCommand {
             if let magnetMode { payload["magnetMode"] = magnetMode }
             if let keepDrawingMode { payload["keepDrawingMode"] = keepDrawingMode }
             if let copyDrawingsToAllCharts { payload["copyDrawingsToAllCharts"] = copyDrawingsToAllCharts }
+            if let enableReplay { payload["enableReplay"] = enableReplay }
             func embedJson(_ key: String, _ json: String?) {
                 guard let json,
                       let data = json.data(using: .utf8),
@@ -1017,6 +1038,22 @@ public enum BridgeCommand {
 
         case let .goToDate(date):
             envelope = ["type": "goToDate", "payload": ["date": date]]
+        case .openReplay:
+            envelope = ["type": "openReplay", "payload": [:]]
+        case .closeReplay:
+            envelope = ["type": "closeReplay", "payload": [:]]
+        case let .startReplay(time):
+            envelope = ["type": "startReplay", "payload": ["time": time]]
+        case .playReplay:
+            envelope = ["type": "playReplay", "payload": [:]]
+        case .pauseReplay:
+            envelope = ["type": "pauseReplay", "payload": [:]]
+        case .replayStepForward:
+            envelope = ["type": "replayStepForward", "payload": [:]]
+        case let .setReplaySpeed(barsPerSecond):
+            envelope = ["type": "setReplaySpeed", "payload": ["barsPerSecond": barsPerSecond]]
+        case .exitReplay:
+            envelope = ["type": "exitReplay", "payload": [:]]
 
         case let .setSidePanelVisible(visible):
             envelope = ["type": "setSidePanelVisible", "payload": ["visible": visible]]

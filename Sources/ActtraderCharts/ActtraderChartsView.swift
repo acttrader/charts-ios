@@ -272,6 +272,8 @@ public class ActtraderChartsView: UIView {
         keepDrawingMode: Bool? = nil,
         /// Announce new drawings for layout-wide replication. Default: `false`.
         copyDrawingsToAllCharts: Bool? = nil,
+        /// Bar Replay — the Replay button and its control strip. Default: `false`.
+        enableReplay: Bool? = nil,
         initialState: String? = nil
     ) {
         // Build WKWebView configuration
@@ -411,7 +413,8 @@ public class ActtraderChartsView: UIView {
             enableSidePanels: enableSidePanels,
             magnetMode: magnetMode,
             keepDrawingMode: keepDrawingMode,
-            copyDrawingsToAllCharts: copyDrawingsToAllCharts
+            copyDrawingsToAllCharts: copyDrawingsToAllCharts,
+            enableReplay: enableReplay
         ))
 
         // Queue state restoration alongside the init command so both are evaluated
@@ -1002,6 +1005,25 @@ public class ActtraderChartsView: UIView {
 
     // ── Quick Search ──────────────────────────────────────────────────────────
 
+    // ── Bar Replay ───────────────────────────────────────────────────────────
+
+    /// Opens the Bar Replay strip and arms "Select bar". Requires `enableReplay` in `init`.
+    public func openReplay() { sendCommand(.openReplay) }
+    /// Leaves any running replay and closes the strip.
+    public func closeReplay() { sendCommand(.closeReplay) }
+    /// Starts a replay at the last bar at or before `timeMs` (unix milliseconds).
+    public func startReplay(timeMs: Int64) { sendCommand(.startReplay(time: timeMs)) }
+    /// Reveals bars one by one at the replay speed.
+    public func playReplay() { sendCommand(.playReplay) }
+    /// Pauses playback.
+    public func pauseReplay() { sendCommand(.pauseReplay) }
+    /// Reveals the next hidden bar.
+    public func replayStepForward() { sendCommand(.replayStepForward) }
+    /// Replay speed in bars per second (0.1 – 10).
+    public func setReplaySpeed(_ barsPerSecond: Double) { sendCommand(.setReplaySpeed(barsPerSecond: barsPerSecond)) }
+    /// Ends the replay and shows the live chart again; the strip stays open.
+    public func exitReplay() { sendCommand(.exitReplay) }
+
     /// Opens the command palette over everything the chart can do.
     ///
     /// The web build opens this with Ctrl/⌘+K or `/`; iOS has neither, so this is
@@ -1428,6 +1450,10 @@ public class ActtraderChartsView: UIView {
              .settingsTemplateSaved,
              .sidePanelVisibility,
              .statusLineChange,
+             .replayStart,
+             .replayStep,
+             .replayEnd,
+             .replayExit,
              .timezoneChange:
             break
         }

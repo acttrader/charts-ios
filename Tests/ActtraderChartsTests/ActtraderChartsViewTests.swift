@@ -102,6 +102,32 @@ final class BridgeCommandTests: XCTestCase {
         XCTAssertEqual(payload["enabled"] as? Bool, false)
     }
 
+    func testReplayCommandsJSON() throws {
+        let open = try parseJSON(BridgeCommand.openReplay.jsonString)
+        XCTAssertEqual(open["type"] as? String, "openReplay")
+
+        let start = try parseJSON(BridgeCommand.startReplay(time: 1_700_000_000_000).jsonString)
+        XCTAssertEqual(start["type"] as? String, "startReplay")
+        let startPayload = try XCTUnwrap(start["payload"] as? [String: Any])
+        XCTAssertEqual((startPayload["time"] as? NSNumber)?.int64Value, 1_700_000_000_000)
+
+        let speed = try parseJSON(BridgeCommand.setReplaySpeed(barsPerSecond: 3).jsonString)
+        XCTAssertEqual(speed["type"] as? String, "setReplaySpeed")
+        let speedPayload = try XCTUnwrap(speed["payload"] as? [String: Any])
+        XCTAssertEqual(speedPayload["barsPerSecond"] as? Double, 3)
+
+        let plain: [(BridgeCommand, String)] = [
+            (BridgeCommand.closeReplay, "closeReplay"),
+            (BridgeCommand.playReplay, "playReplay"),
+            (BridgeCommand.pauseReplay, "pauseReplay"),
+            (BridgeCommand.replayStepForward, "replayStepForward"),
+            (BridgeCommand.exitReplay, "exitReplay"),
+        ]
+        for (cmd, type) in plain {
+            XCTAssertEqual(try parseJSON(cmd.jsonString)["type"] as? String, type)
+        }
+    }
+
     func testInitWithComparesIncludesInitialCompares() throws {
         let cmd = BridgeCommand.initialize(
             theme: "dark",
@@ -264,6 +290,22 @@ final class BridgeCommandTests: XCTestCase {
         guard case .ready = event else {
             XCTFail("Expected .ready, got \(String(describing: event))")
             return
+        }
+    }
+
+    func testParseReplayEvents() {
+        guard case let .replayStart(time)? = BridgeEvent.parse(#"{"type":"replayStart","payload":{"time":1700000000000}}"#) else {
+            return XCTFail("replayStart did not parse")
+        }
+        XCTAssertEqual(time, 1_700_000_000_000)
+        guard case .replayStep? = BridgeEvent.parse(#"{"type":"replayStep","payload":{"time":1}}"#) else {
+            return XCTFail("replayStep did not parse")
+        }
+        guard case .replayEnd? = BridgeEvent.parse(#"{"type":"replayEnd","payload":{"time":1}}"#) else {
+            return XCTFail("replayEnd did not parse")
+        }
+        guard case .replayExit? = BridgeEvent.parse(#"{"type":"replayExit","payload":{}}"#) else {
+            return XCTFail("replayExit did not parse")
         }
     }
 
