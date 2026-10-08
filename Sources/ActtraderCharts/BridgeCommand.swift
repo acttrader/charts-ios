@@ -351,7 +351,9 @@ public enum BridgeCommand {
         /// chart cannot, since only you know which panes exist. Default: `false`.
         copyDrawingsToAllCharts: Bool? = nil,
         /// Bar Replay — the Replay button and its control strip. Default: `false`.
-        enableReplay: Bool? = nil
+        enableReplay: Bool? = nil,
+        /// Two-finger measure (mobile): hold two fingers to see the change between two bars. Default: `false`.
+        enableTwoFingerMeasure: Bool? = nil
     )
 
     /// Replaces the full dataset.
@@ -823,7 +825,8 @@ public enum BridgeCommand {
                              enableIconTools, enableChartSettings, statusLineJson,
                              scalesJson, canvasJson, barColorSource,
                              enableScaleControls, priceScaleMode, autoScale, enableSidePanels,
-                             magnetMode, keepDrawingMode, copyDrawingsToAllCharts, enableReplay):
+                             magnetMode, keepDrawingMode, copyDrawingsToAllCharts, enableReplay,
+                             enableTwoFingerMeasure):
             var payload: [String: Any] = ["theme": theme]
             if let symbol { payload["symbol"] = symbol }
             if let instrument { payload["instrument"] = instrument.toDictionary() }
@@ -914,6 +917,7 @@ public enum BridgeCommand {
             if let keepDrawingMode { payload["keepDrawingMode"] = keepDrawingMode }
             if let copyDrawingsToAllCharts { payload["copyDrawingsToAllCharts"] = copyDrawingsToAllCharts }
             if let enableReplay { payload["enableReplay"] = enableReplay }
+            if let enableTwoFingerMeasure { payload["enableTwoFingerMeasure"] = enableTwoFingerMeasure }
             func embedJson(_ key: String, _ json: String?) {
                 guard let json,
                       let data = json.data(using: .utf8),

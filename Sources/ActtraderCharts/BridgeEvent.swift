@@ -293,6 +293,12 @@ public enum BridgeEvent {
     case replayEnd(time: Int64)
     /// Bar Replay ended and the live chart is back.
     case replayExit
+    /// Two-finger measure (mobile): the user is holding two fingers on the chart.
+    /// `phase` is "start", "update" or "end"; times are unix ms; `change` is
+    /// close-to-close and `changePercent` relative to the start close.
+    case twoFingerMeasure(phase: String, startTime: Int64, endTime: Int64,
+                          startClose: Double, endClose: Double,
+                          change: Double, changePercent: Double, bars: Int)
 
     /// The side panel was shown or hidden. `tab` is `"data"` or `"objects"`.
     case sidePanelVisibility(visible: Bool, tab: String)
@@ -783,6 +789,17 @@ public enum BridgeEvent {
             return .replayEnd(time: (p["time"] as? NSNumber)?.int64Value ?? 0)
         case "replayExit":
             return .replayExit
+        case "twoFingerMeasure":
+            return .twoFingerMeasure(
+                phase: p["phase"] as? String ?? "update",
+                startTime: (p["startTime"] as? NSNumber)?.int64Value ?? 0,
+                endTime: (p["endTime"] as? NSNumber)?.int64Value ?? 0,
+                startClose: (p["startClose"] as? NSNumber)?.doubleValue ?? 0,
+                endClose: (p["endClose"] as? NSNumber)?.doubleValue ?? 0,
+                change: (p["change"] as? NSNumber)?.doubleValue ?? 0,
+                changePercent: (p["changePercent"] as? NSNumber)?.doubleValue ?? 0,
+                bars: p["bars"] as? Int ?? 0
+            )
 
         case "sidePanelVisibility":
             return .sidePanelVisibility(
