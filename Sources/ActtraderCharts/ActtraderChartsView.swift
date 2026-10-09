@@ -274,6 +274,8 @@ public class ActtraderChartsView: UIView {
         copyDrawingsToAllCharts: Bool? = nil,
         /// Bar Replay — the Replay button and its control strip. Default: `false`.
         enableReplay: Bool? = nil,
+        /// Two-finger measure (mobile): hold two fingers to see the change between two bars. Default: `false`.
+        enableTwoFingerMeasure: Bool? = nil,
         initialState: String? = nil
     ) {
         // Build WKWebView configuration
@@ -414,7 +416,8 @@ public class ActtraderChartsView: UIView {
             magnetMode: magnetMode,
             keepDrawingMode: keepDrawingMode,
             copyDrawingsToAllCharts: copyDrawingsToAllCharts,
-            enableReplay: enableReplay
+            enableReplay: enableReplay,
+            enableTwoFingerMeasure: enableTwoFingerMeasure
         ))
 
         // Queue state restoration alongside the init command so both are evaluated
@@ -1454,6 +1457,7 @@ public class ActtraderChartsView: UIView {
              .replayStep,
              .replayEnd,
              .replayExit,
+             .twoFingerMeasure,
              .timezoneChange:
             break
         }

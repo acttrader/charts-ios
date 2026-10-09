@@ -293,6 +293,12 @@ public enum BridgeEvent {
     case replayEnd(time: Int64)
     /// Bar Replay ended and the live chart is back.
     case replayExit
+    /// Two-finger measure (mobile): the user is holding two fingers on the chart.
+    /// `phase` is "start", "update" or "end"; times are unix ms; `change` is
+    /// close-to-close and `changePercent` relative to the start close.
+    case twoFingerMeasure(phase: String, startTime: Int64, endTime: Int64,
+                          startClose: Double, endClose: Double,
+                          change: Double, changePercent: Double, bars: Int)
 
     /// The side panel was shown or hidden. `tab` is `"data"` or `"objects"`.
     case sidePanelVisibility(visible: Bool, tab: String)
@@ -783,6 +789,23 @@ public enum BridgeEvent {
             return .replayEnd(time: (p["time"] as? NSNumber)?.int64Value ?? 0)
         case "replayExit":
             return .replayExit
+        case "twoFingerMeasure":
+            // Eight fields bound one at a time: the single-expression form with
+            // eight `as? NSNumber ?? 0` chains is more than the type checker
+            // solves in reasonable time (see `int64(_:)` below).
+            let phase         = p["phase"] as? String ?? "update"
+            let startTime     = Self.int64(p["startTime"])
+            let endTime       = Self.int64(p["endTime"])
+            let startClose    = Self.double(p["startClose"])
+            let endClose      = Self.double(p["endClose"])
+            let change        = Self.double(p["change"])
+            let changePercent = Self.double(p["changePercent"])
+            let bars          = Self.int(p["bars"])
+            return .twoFingerMeasure(
+                phase: phase, startTime: startTime, endTime: endTime,
+                startClose: startClose, endClose: endClose,
+                change: change, changePercent: changePercent, bars: bars
+            )
 
         case "sidePanelVisibility":
             return .sidePanelVisibility(
@@ -819,6 +842,13 @@ public enum BridgeEvent {
     private static func int(_ value: Any?) -> Int {
         if let v = value as? Int { return v }
         if let v = value as? Double { return Int(v) }
+        return 0
+    }
+
+    /// A JSON number as `Double` — see ``int64(_:)``.
+    private static func double(_ value: Any?) -> Double {
+        if let v = value as? Double { return v }
+        if let v = value as? Int { return Double(v) }
         return 0
     }
 

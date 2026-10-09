@@ -309,6 +309,21 @@ final class BridgeCommandTests: XCTestCase {
         }
     }
 
+    func testParseTwoFingerMeasureEvent() {
+        let json = #"{"type":"twoFingerMeasure","payload":{"phase":"update","startTime":1,"endTime":2,"startClose":779.4,"endClose":1000.75,"change":221.35,"changePercent":28.4,"bars":3}}"#
+        guard case let .twoFingerMeasure(phase, startTime, endTime, startClose, endClose, change, changePercent, bars)? = BridgeEvent.parse(json) else {
+            return XCTFail("twoFingerMeasure did not parse")
+        }
+        XCTAssertEqual(phase, "update")
+        XCTAssertEqual(startTime, 1)
+        XCTAssertEqual(endTime, 2)
+        XCTAssertEqual(startClose, 779.4, accuracy: 0.0001)
+        XCTAssertEqual(endClose, 1000.75, accuracy: 0.0001)
+        XCTAssertEqual(change, 221.35, accuracy: 0.0001)
+        XCTAssertEqual(changePercent, 28.4, accuracy: 0.0001)
+        XCTAssertEqual(bars, 3)
+    }
+
     func testParseCrosshairEvent() {
         let json = """
         {

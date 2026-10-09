@@ -894,6 +894,24 @@ Two behaviours worth knowing:
   "fixed" means fixed *proportion*, not fixed size.
 
 
+## Two-finger measure (mobile)
+
+Hold two fingers on the chart and it shows what the TradingView app shows: the
+close and date under each finger and, between them, the change in price and
+percent, coloured by direction, with the range tinted. Moving the fingers moves
+the measurement; lifting either finger ends it. Pinch still zooms — the measure
+starts once both fingers have rested for about 0.3 s.
+
+```swift
+let chart = ActtraderChartsView(enableTwoFingerMeasure: true)
+
+chart.onBridgeEvent = { event in
+    if case let .twoFingerMeasure(phase, _, _, _, _, change, changePercent, bars) = event {
+        print(phase, change, changePercent, bars)   // phase "start" / "update" / "end"
+    }
+}
+```
+
 ## Bar Replay
 
 Replay history bar by bar, as TradingView does. `enableReplay: true` adds a
