@@ -790,15 +790,21 @@ public enum BridgeEvent {
         case "replayExit":
             return .replayExit
         case "twoFingerMeasure":
+            // Eight fields bound one at a time: the single-expression form with
+            // eight `as? NSNumber ?? 0` chains is more than the type checker
+            // solves in reasonable time (see `int64(_:)` below).
+            let phase         = p["phase"] as? String ?? "update"
+            let startTime     = Self.int64(p["startTime"])
+            let endTime       = Self.int64(p["endTime"])
+            let startClose    = Self.double(p["startClose"])
+            let endClose      = Self.double(p["endClose"])
+            let change        = Self.double(p["change"])
+            let changePercent = Self.double(p["changePercent"])
+            let bars          = Self.int(p["bars"])
             return .twoFingerMeasure(
-                phase: p["phase"] as? String ?? "update",
-                startTime: (p["startTime"] as? NSNumber)?.int64Value ?? 0,
-                endTime: (p["endTime"] as? NSNumber)?.int64Value ?? 0,
-                startClose: (p["startClose"] as? NSNumber)?.doubleValue ?? 0,
-                endClose: (p["endClose"] as? NSNumber)?.doubleValue ?? 0,
-                change: (p["change"] as? NSNumber)?.doubleValue ?? 0,
-                changePercent: (p["changePercent"] as? NSNumber)?.doubleValue ?? 0,
-                bars: p["bars"] as? Int ?? 0
+                phase: phase, startTime: startTime, endTime: endTime,
+                startClose: startClose, endClose: endClose,
+                change: change, changePercent: changePercent, bars: bars
             )
 
         case "sidePanelVisibility":
@@ -836,6 +842,13 @@ public enum BridgeEvent {
     private static func int(_ value: Any?) -> Int {
         if let v = value as? Int { return v }
         if let v = value as? Double { return Int(v) }
+        return 0
+    }
+
+    /// A JSON number as `Double` — see ``int64(_:)``.
+    private static func double(_ value: Any?) -> Double {
+        if let v = value as? Double { return v }
+        if let v = value as? Int { return Double(v) }
         return 0
     }
 
