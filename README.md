@@ -700,6 +700,12 @@ otherwise give a different on-screen angle. Drawings saved before this field
 existed are measured once on their next render and then keep that value. Nothing
 to configure on the native side; pass drawings through as before.
 
+The two stored points are the user's and are never rewritten by rendering: the
+line is drawn from the first point at the stored angle, as far as the second
+point projects on the current screen. (Before chart 1.4.0-beta.4 the second point
+was moved back onto the line on every render, so each zoom, pinch or tick's
+auto-fit lengthened the line a little more until it ran off the pane.)
+
 ### Icons, emojis & stickers — `"icon"`
 
 A glyph placed at a bar and price, behind the `enableIconTools` init flag.
@@ -1073,6 +1079,10 @@ forms when *price* moves far enough, so 365 daily candles might be 24 bricks or
 - switching in or out **refits the view**, since the element count changes;
 - **market price still comes off the raw feed**, so trade levels and P&L never
   price against a brick top.
+- **live ticks never re-grid the chart** — box sizes are measured over closed
+  bars, and the view keeps tracking the live edge whether the forming bar adds
+  an element or takes it back (chart 1.4.0-beta.4; these types used to go blank
+  after a while on a live feed).
 
 ```swift
 chart.setSeries("renko")
