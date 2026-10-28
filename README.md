@@ -1032,6 +1032,22 @@ The eraser consumes every tap, hit or miss: a miss must not fall through to
 selecting or panning, which would be a surprising thing to do with an eraser in
 hand. It deletes through the same undo history as every other delete.
 
+### Touch gestures (iOS / Android)
+
+| Gesture | Effect |
+| --- | --- |
+| One-finger drag on the chart | Scrolls through time (with momentum) |
+| Pinch | Zooms the time axis |
+| One-finger drag along the time (x) axis | Zooms the time axis: drag right to show more bars, left to show fewer |
+| One-finger drag on the price (y) axis | Zooms the price axis |
+| One-finger **double tap** on the chart or price axis | Zooms the price axis in one step around the tapped price |
+| One-finger **double tap, then drag** up/down | Zooms the price axis continuously: up zooms in, down zooms out (the same direction as the price-axis drag) |
+| Long press | Shows the crosshair |
+
+Once the view has moved away from its default, a round **Reset view** button
+appears just above the time axis. It is shown even when `showUI: false`, so a
+bare chart with no toolbar always has a way back. No configuration is needed.
+
 ### Value tooltip on long press
 
 `valueTooltip` shows a floating OHLCV readout beside a long press, on top of the
