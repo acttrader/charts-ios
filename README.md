@@ -1038,9 +1038,10 @@ hand. It deletes through the same undo history as every other delete.
 | --- | --- |
 | One-finger drag on the chart | Scrolls through time (with momentum) |
 | Pinch | Zooms the time axis |
-| One-finger drag along the time (x) axis | Zooms the time axis: drag right to show more bars, left to show fewer |
+| One-finger drag along the time (x) axis | Zooms the time axis the way TradingView does: the right edge (normally the latest bar) stays put, drag right to zoom in and left to zoom out. Zooming out stops when the oldest bar reaches the left edge, so the candles always fill the full width. The mouse drag on the time axis behaves the same way |
 | One-finger drag on the price (y) axis | Zooms the price axis |
-| One-finger **double tap** on the chart or price axis | Zooms the price axis in one step around the tapped price |
+| One-finger **double tap** on the chart | Zooms the price axis in one step around the tapped price |
+| One-finger **double tap** on the price (y) axis | Resets the view, the same as the Reset view button |
 | One-finger **double tap, then drag** up/down | Zooms the price axis continuously: up zooms in, down zooms out (the same direction as the price-axis drag) |
 | Long press | Shows the crosshair |
 
