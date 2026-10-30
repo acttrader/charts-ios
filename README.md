@@ -375,7 +375,7 @@ chart.initialize(
 | `setVolume(_:)` | Show or hide the volume sub-pane |
 | `setIsins(_:)` | Update the symbol list used by the ISIN picker |
 | `setMinLots(_:)` | Update the minimum lot size in the trade popover |
-| `resetView()` | Reset price and time axes to auto-fit. The built-in bottom-center reset button invokes this — it is hidden while the chart is at its default view and fades in only after the user pans, zooms, or price-scales |
+| `resetView()` | Reset price and time axes to auto-fit. The built-in bottom-center reset button invokes this — it is hidden while the chart is at its default view and fades in only after the user pans, zooms, or price-scales. The button is not shown when `showUI` is `false`; call this method from your own control instead |
 | `resetData()` | Clear all bars, the live price line, any in-flight fetch, **all user drawings, and all trade/position levels** (including pending draft orders). Call before switching to a new symbol to prevent previous symbol state from bleeding in (see example below). For a same-symbol data refresh that should preserve drawings, call `loadData([])` directly instead |
 | `setLoading(_:)` | Show or hide the loading overlay |
 | `setTimezone(_:)` | Change display timezone at runtime — IANA string (`"America/New_York"`) or `"local"` |
@@ -1046,8 +1046,10 @@ hand. It deletes through the same undo history as every other delete.
 | Long press | Shows the crosshair |
 
 Once the view has moved away from its default, a round **Reset view** button
-appears just above the time axis. It is shown even when `showUI: false`, so a
-bare chart with no toolbar always has a way back. No configuration is needed.
+appears just above the time axis. It is part of the built-in UI, so it is not
+shown when `showUI: false` (the usual iOS / Android setup, where the app draws
+its own controls). On a bare chart, double tap the price axis or call
+`resetView()` to bring the view back.
 
 ### Value tooltip on long press
 
