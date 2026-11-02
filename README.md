@@ -388,6 +388,7 @@ chart.initialize(
 | `addCompare(_:)` | Add a compare symbol overlay. Fires `onCompareDataRequest` — reply via `resolveCompareDataRequest` |
 | `removeCompare(_:)` | Remove a compare symbol. No-op if not active |
 | `clearCompares()` | Remove every active compare symbol |
+| `openComparePicker()` | Open the chart's own compare picker (symbols from `isins`) — for hosts that hide the chart header |
 | `resolveCompareDataRequest(requestId:bars:)` | Resolve a pending `onCompareDataRequest` with fetched bars |
 
 #### Symbol switch pattern
@@ -445,6 +446,7 @@ chart.loadData(bars)
 | `onCompareError` | Compare fetch / add failed — payload includes `symbol`, `message` |
 | `onIndicatorAdded` | Study instance added — payload includes `instanceId`, `shortName`, `params`; keep `instanceId` to remove that instance later |
 | `onIndicatorRemoved` | Study instance removed — payload includes `instanceId`, `shortName` |
+| `onIndicatorLimitReached` | Study refused, all sub-pane slots in use — payload includes `shortName`, `maxSubPanes` |
 | `onError` | Engine error |
 | `onBridgeEvent` | Generic fallback — every event including those with typed callbacks |
 
@@ -827,8 +829,34 @@ substituting a stand-in series that would answer a different question than the
 indicator's name promises.
 
 **`maxSubPanes` caps concurrent sub-pane indicators.** Most of these 78 live in
-their own pane, so adding many at once silently stops at the cap. Raise
+their own pane, so adding one past the cap is refused: the chart shows a short
+notice and fires `onIndicatorLimitReached` (shortName, maxSubPanes). Raise
 `maxSubPanes` in the `init` payload if you need more on screen together.
+
+```swift
+chart.onIndicatorLimitReached = { event in
+    if case let .indicatorLimitReached(shortName, maxSubPanes) = event {
+        print("\(shortName) not added: \(maxSubPanes) panes in use")
+    }
+}
+```
+
+**Compare-based studies say what they need.** Correlation Coefficient,
+Correlation - Log, Ratio and Spread need one Compare symbol and Advance/Decline
+needs two. Until then their pane shows *"Click Compare in the chart header to add a symbol for this
+indicator"* instead of staying blank, and they fill in as soon as the compare
+loads.
+
+**Bars without volume become gaps.** Volume studies (Volume, OBV, A/D, MFI, CMF,
+VWAP, EOM, EFI, Klinger, Volume Oscillator, Net Volume, PVT, Chaikin Oscillator)
+draw nothing on bars whose feed sent no volume (missing or 0). The line ends at
+the last bar with volume instead of going flat or reading MFI 100, and a pane with
+no volume in view says *"No volume data from the feed for these bars"*.
+
+**52 Week High/Low** covers 52 weeks of time on every timeframe, or all the
+loaded history when that is shorter. **Zig Zag** always draws its latest leg,
+even when no swing has reached the deviation yet. Large sub-pane axis values are
+shortened (1.83M, -45.6B).
 
 
 ## Shapes & arrow tools

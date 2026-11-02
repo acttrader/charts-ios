@@ -678,6 +678,9 @@ public enum BridgeCommand {
     /// Removes every active compare symbol.
     case clearCompares
 
+    /// Opens the chart's own compare picker (symbols from `isins`).
+    case openComparePicker
+
     /// Resolves a pending `compareDataRequest` with fetched bars.
     case resolveCompareDataRequest(requestId: String, bars: [OHLCVBar])
 
@@ -1249,6 +1252,8 @@ public enum BridgeCommand {
 
         case .clearCompares:
             envelope = ["type": "clearCompares", "payload": [:]]
+        case .openComparePicker:
+            envelope = ["type": "openComparePicker", "payload": [:]]
 
         case let .resolveCompareDataRequest(requestId, bars):
             let barsArray: [[String: Any]] = bars.map { bar in

@@ -188,6 +188,10 @@ public enum BridgeEvent {
     /// A study instance was removed (pill ×, settings dialog, or removeIndicator).
     case indicatorRemoved(instanceId: String, shortName: String)
 
+    /// A study was refused because every sub-pane slot is in use (`maxSubPanes`,
+    /// default 3). The chart also shows a short notice to the user.
+    case indicatorLimitReached(shortName: String, maxSubPanes: Int)
+
     // ── Layouts ──────────────────────────────────────────────────────────────
 
     /// A workspace was saved as a named layout. **Persist `layoutJson`** — the chart
@@ -644,6 +648,11 @@ public enum BridgeEvent {
                 let shortName  = p["shortName"]  as? String
             else { return nil }
             return .indicatorRemoved(instanceId: instanceId, shortName: shortName)
+
+        case "indicatorLimitReached":
+            guard let shortName = p["shortName"] as? String else { return nil }
+            return .indicatorLimitReached(shortName: shortName,
+                                          maxSubPanes: (p["maxSubPanes"] as? NSNumber)?.intValue ?? 3)
 
         case "layoutSaved":
             guard

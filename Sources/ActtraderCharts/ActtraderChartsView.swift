@@ -590,6 +590,10 @@ public class ActtraderChartsView: UIView {
     /// Called when a study instance is removed — payload `.indicatorRemoved(instanceId:shortName:)`.
     public var onIndicatorRemoved: ((BridgeEvent) -> Void)?
 
+    /// Called when a study is refused because all `maxSubPanes` sub-pane slots are in use —
+    /// payload `.indicatorLimitReached(shortName:maxSubPanes:)`.
+    public var onIndicatorLimitReached: ((BridgeEvent) -> Void)?
+
     /// Called when the chart engine reports an error.
     public var onError: ((BridgeEvent) -> Void)?
 
@@ -865,6 +869,12 @@ public class ActtraderChartsView: UIView {
     /// Removes every active compare symbol.
     public func clearCompares() {
         sendCommand(.clearCompares)
+    }
+
+    /// Opens the chart's own compare picker — the symbols passed as `isins`.
+    /// Needed for Correlation, Ratio, Spread and Advance/Decline.
+    public func openComparePicker() {
+        sendCommand(.openComparePicker)
     }
 
     // ── Snapshot ──────────────────────────────────────────────────────────────
@@ -1425,6 +1435,7 @@ public class ActtraderChartsView: UIView {
         case .compareError:        onCompareError?(event)
         case .indicatorAdded:      onIndicatorAdded?(event)
         case .indicatorRemoved:    onIndicatorRemoved?(event)
+        case .indicatorLimitReached: onIndicatorLimitReached?(event)
         case .error:               onError?(event)
         // No typed callback yet — these reach the host through `onBridgeEvent` above.
         case .autoScaleChange,
