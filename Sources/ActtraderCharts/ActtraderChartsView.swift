@@ -594,6 +594,11 @@ public class ActtraderChartsView: UIView {
     /// payload `.indicatorLimitReached(shortName:maxSubPanes:)`.
     public var onIndicatorLimitReached: ((BridgeEvent) -> Void)?
 
+    /// Called after each data load — payload `.volumeAvailability(hasVolume:)`. When
+    /// `hasVolume` is false, volume studies are not plotted; grey out the catalog
+    /// indicators with `requiresVolume: true`.
+    public var onVolumeAvailability: ((BridgeEvent) -> Void)?
+
     /// Called when the chart engine reports an error.
     public var onError: ((BridgeEvent) -> Void)?
 
@@ -1436,6 +1441,7 @@ public class ActtraderChartsView: UIView {
         case .indicatorAdded:      onIndicatorAdded?(event)
         case .indicatorRemoved:    onIndicatorRemoved?(event)
         case .indicatorLimitReached: onIndicatorLimitReached?(event)
+        case .volumeAvailability:  onVolumeAvailability?(event)
         case .error:               onError?(event)
         // No typed callback yet — these reach the host through `onBridgeEvent` above.
         case .autoScaleChange,

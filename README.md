@@ -447,6 +447,7 @@ chart.loadData(bars)
 | `onIndicatorAdded` | Study instance added — payload includes `instanceId`, `shortName`, `params`; keep `instanceId` to remove that instance later |
 | `onIndicatorRemoved` | Study instance removed — payload includes `instanceId`, `shortName` |
 | `onIndicatorLimitReached` | Study refused, all sub-pane slots in use — payload includes `shortName`, `maxSubPanes` |
+| `onVolumeAvailability` | After each data load — `.volumeAvailability(hasVolume:)`. When `false`, volume studies are not plotted: grey out catalog indicators with `requiresVolume: true` |
 | `onError` | Engine error |
 | `onBridgeEvent` | Generic fallback — every event including those with typed callbacks |
 

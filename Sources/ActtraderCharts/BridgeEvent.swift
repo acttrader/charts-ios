@@ -192,6 +192,10 @@ public enum BridgeEvent {
     /// default 3). The chart also shows a short notice to the user.
     case indicatorLimitReached(shortName: String, maxSubPanes: Int)
 
+    /// Sent after each data load. `hasVolume == false`: no loaded bar has volume, so
+    /// volume studies (catalog `requiresVolume: true`) are not plotted — grey them out.
+    case volumeAvailability(hasVolume: Bool)
+
     // ── Layouts ──────────────────────────────────────────────────────────────
 
     /// A workspace was saved as a named layout. **Persist `layoutJson`** — the chart
@@ -653,6 +657,9 @@ public enum BridgeEvent {
             guard let shortName = p["shortName"] as? String else { return nil }
             return .indicatorLimitReached(shortName: shortName,
                                           maxSubPanes: (p["maxSubPanes"] as? NSNumber)?.intValue ?? 3)
+
+        case "volumeAvailability":
+            return .volumeAvailability(hasVolume: p["hasVolume"] as? Bool ?? true)
 
         case "layoutSaved":
             guard
