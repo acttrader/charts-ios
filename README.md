@@ -155,7 +155,7 @@ ActtraderChartsView.prewarm()
 | `maxSubPanes` | `Int?` | `nil` | Max simultaneous oscillator sub-panes |
 | `prefetchThreshold` | `Int?` | `nil` | Bars from start of data at which historical fetch triggers (min 20, default 80) |
 | `mobileBarDivisor` | `Int?` | `nil` | Divide desktop bar count on touch (`2`, `3`, or `4`) |
-| `minInitialBars` | `Int?` | `nil` | If `onDataRequest` returns fewer bars, the fetch window auto-widens and retries. Default: `10` |
+| `minInitialBars` | `Int?` | `nil` | If `onDataRequest` returns fewer bars, the fetch window auto-widens and retries. The retry with the most bars is kept, so a wide window the feed refuses (empty or error) never turns bars already received into \"No data available\". Default: `10` |
 | `maxLookbackMs` | `Int64?` | `nil` | Hard ceiling (ms) for auto-widening retries. Default: 365 days |
 | `momentumScrollEnabled` | `Bool?` | `nil` | Enable momentum (kinetic) scrolling — chart coasts after a fast flick. Default: `true`. Note: momentum runs in the JS layer, not `UIScrollView` |
 | `momentumDecay` | `Double?` | `nil` | Per-frame velocity decay, normalised to 60 fps. Clamped `[0.80, 0.99]`. Default: `0.95` |
@@ -447,7 +447,7 @@ chart.loadData(bars)
 | `onIndicatorAdded` | Study instance added — payload includes `instanceId`, `shortName`, `params`; keep `instanceId` to remove that instance later |
 | `onIndicatorRemoved` | Study instance removed — payload includes `instanceId`, `shortName` |
 | `onIndicatorLimitReached` | Study refused, all sub-pane slots in use — payload includes `shortName`, `maxSubPanes` |
-| `onVolumeAvailability` | After each data load — `.volumeAvailability(hasVolume:)`. When `false`, volume studies are not plotted: grey out catalog indicators with `requiresVolume: true` |
+| `onVolumeAvailability` | After each data load — `.volumeAvailability(hasVolume:)`. When `false`, volume studies are not plotted: hide or grey out catalog indicators with `requiresVolume: true` (the web menus leave them out) |
 | `onError` | Engine error |
 | `onBridgeEvent` | Generic fallback — every event including those with typed callbacks |
 
