@@ -444,7 +444,7 @@ chart.loadData(bars)
 | `onCompareAdded` | Compare symbol added — payload includes `symbol`, `color` |
 | `onCompareRemoved` | Compare symbol removed — payload includes `symbol` |
 | `onCompareError` | Compare fetch / add failed — payload includes `symbol`, `message` |
-| `onIndicatorAdded` | Study instance added — payload includes `instanceId`, `shortName`, `params`; keep `instanceId` to remove that instance later |
+| `onIndicatorAdded` | Study instance added — payload includes `instanceId`, `shortName`, `params`; keep `instanceId` to remove that instance later. `shortName` is always the catalog short name (`HammingMA`, not "Hamming MA"), so it matches the `indicators` list in the catalog for ticking your menu |
 | `onIndicatorRemoved` | Study instance removed — payload includes `instanceId`, `shortName` |
 | `onIndicatorLimitReached` | Study refused, all sub-pane slots in use — payload includes `shortName`, `maxSubPanes` |
 | `onVolumeAvailability` | After each data load — `.volumeAvailability(hasVolume:)`. When `false`, volume studies are not plotted: hide or grey out catalog indicators with `requiresVolume: true` (the web menus leave them out) |
