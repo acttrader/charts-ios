@@ -785,6 +785,14 @@ public enum BridgeCommand {
     /// Snaps drawing points to the nearest OHLC of the bar under the cursor.
     case setMagnetMode(enabled: Bool)
 
+    /// Chooses the glyph the next `icon` drawing places — a tap in your own
+    /// Emojis / Stickers / Icons picker, built from the catalog's `glyphTabs`
+    /// on the `icon` tool. Send ``setDrawingTool(_:)`` with `"icon"` after it.
+    /// - Parameters:
+    ///   - glyph: the character from `glyphTabs[].groups[].glyphs`.
+    ///   - kind: the tab it came from — `"emoji"`, `"sticker"` (placed larger) or `"icon"` (takes the drawing colour).
+    case setIconGlyph(glyph: String, kind: String)
+
     /// Keeps the active tool armed after each drawing, for placing a series.
     case setKeepDrawingMode(enabled: Bool)
 
@@ -1334,6 +1342,9 @@ public enum BridgeCommand {
 
         case let .setMagnetMode(enabled):
             envelope = ["type": "setMagnetMode", "payload": ["enabled": enabled]]
+
+        case let .setIconGlyph(glyph, kind):
+            envelope = ["type": "setIconGlyph", "payload": ["glyph": glyph, "kind": kind]]
 
         case let .setKeepDrawingMode(enabled):
             envelope = ["type": "setKeepDrawingMode", "payload": ["enabled": enabled]]

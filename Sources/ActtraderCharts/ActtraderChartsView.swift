@@ -983,6 +983,15 @@ public class ActtraderChartsView: UIView {
     /// Snaps drawing points to the nearest OHLC of the bar under the cursor.
     public func setMagnetMode(_ enabled: Bool) { sendCommand(.setMagnetMode(enabled: enabled)) }
 
+    /// Chooses the glyph the next `icon` drawing places, from the catalog's
+    /// `glyphTabs`. Call ``setDrawingTool(_:)`` with `"icon"` afterwards.
+    /// - Parameters:
+    ///   - glyph: the emoji, sticker or icon character.
+    ///   - kind: `"emoji"` (default), `"sticker"` or `"icon"`.
+    public func setIconGlyph(_ glyph: String, kind: String = "emoji") {
+        sendCommand(.setIconGlyph(glyph: glyph, kind: kind))
+    }
+
     /// Keeps the active tool armed after each drawing, for placing a series.
     public func setKeepDrawingMode(_ enabled: Bool) { sendCommand(.setKeepDrawingMode(enabled: enabled)) }
 

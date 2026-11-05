@@ -725,6 +725,19 @@ scrolling grid, and **Emojis / Stickers / Icons** along the bottom. Stickers are
 the same characters placed larger; Icons are monochrome and take the drawing's
 colour, which an emoji cannot since it is a colour bitmap in the system font.
 
+**Your own picker (native UI).** The panel above is the chart's built-in
+toolbar. When your app draws its own drawing sheet, build the picker from the
+catalog: the `icon` tool in `drawingGroups` carries `glyphTabs` — one per
+`kind` (`emoji`, `sticker`, `icon`) with its `label` and `groups`
+(`id`, `name`, `tabIcon`, `glyphs`). On a tap:
+
+```swift
+chart.setIconGlyph("😍", kind: "sticker")   // "emoji" (default) | "sticker" | "icon"
+chart.setDrawingTool("icon")
+```
+
+Without this the app had no emoji list to show, and every icon placed was ⭐.
+
 A placed icon is **resizable by dragging any of its four corner handles**, and
 its size is also in the style popover. The size is in pixels, so it does not
 rescale when the chart is zoomed — a pin dropped on a bar stays the size it was
@@ -743,6 +756,7 @@ Both tools are `setDrawingTool` strings — no wrapper change.
 | Method | What it does |
 | --- | --- |
 | `setMagnetMode(_)` | Drawing points snap to the nearest OHLC of the bar under the cursor. |
+| `setIconGlyph(_, kind)` | Glyph the next `icon` drawing places, from the catalog's `glyphTabs`. Then `setDrawingTool("icon")`. |
 | `setKeepDrawingMode(_)` | The tool stays armed after each drawing. |
 | `setCopyDrawingsToAllCharts(_)` | New drawings are announced for layout-wide replication. |
 | `setDrawingToolbarVisible(_)` | Shows or hides the drawing toolbar at runtime. |
@@ -1312,6 +1326,18 @@ chart.clearCompares()
 
 When at least one compare is active the Y-axis switches to percent
 (`+12.34%` / `-5.67%`); removing every compare returns it to absolute prices.
+
+#### Saving and syncing compares
+
+The `compares` list in `onStateChange` is `[]` once the last compare is
+removed. Save it as it is, including `[]`, so the removal reaches the web and
+the trader's other devices. Passing `compares: []` to `setState` clears every
+compare, and a list applied before the first data load is fetched with that
+load instead of failing.
+
+The % on each legend chip uses the same baseline as the lines (the leftmost
+visible bar) and updates as the trader scrolls and zooms, so two screens
+showing different ranges show different %.
 
 ## Multiple instances of the same study
 
