@@ -4,13 +4,18 @@ on:
   push:
     tags:
       - 'v*'
+  # Manual run = tests only (the release step needs a tag ref).
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   test-and-release:
-    runs-on: macos-14
+    # macos-14 was retired by GitHub (2026-11-06: "The configuration
+    # 'macos-14-arm64-us-default' is not supported" — the v1.4.0-beta.13 run
+    # was cancelled in 1s).
+    runs-on: macos-15
     # softprops/action-gh-release needs a writable token — without this the
     # default read-only GITHUB_TOKEN 403s on "Create GitHub Release".
     permissions:
@@ -20,7 +25,11 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+        run: |
+          XC=$(ls -d /Applications/Xcode_16.4.app 2>/dev/null || ls -d /Applications/Xcode_16*.app | sort -V | tail -1)
+          echo "Using $XC"
+          sudo xcode-select -s "$XC"
+          swift --version
 
       - name: Run tests
         run: |
@@ -29,6 +38,7 @@ jobs:
             -Xswiftc -DSWIFT_PACKAGE
 
       - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
